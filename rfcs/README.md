@@ -6,4 +6,4 @@
 
 ## Creating a new RFC
 
-Copy the structure of RFC-0001, assign the next number, and open a discussion. Do not edit an accepted RFC in place; supersede it with a new one.
+Copy the structure of RFC-0001, assign the next number, and open a discussion. Do not edit an accepted RFC in place; supersede it with a new one. Record every RFC decision in [`DECISIONS.md`](../DECISIONS.md).

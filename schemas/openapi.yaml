@@ -1,0 +1,374 @@
+openapi: 3.1.0
+info:
+  title: TubeKeel demo API
+  version: 0.1.0
+  description: |
+    Draft contract for the local TubeKeel demo. Core runs on port 8080 and
+    moderation runs on port 8082. The demo token is optional locally and
+    required when TUBEKEEL_DEMO_TOKEN is set.
+  license:
+    name: CC-BY-4.0
+    url: https://creativecommons.org/licenses/by/4.0/
+tags:
+  - name: core
+  - name: moderation
+paths:
+  /health:
+    get:
+      tags: [core, moderation]
+      summary: Liveness check
+      responses:
+        "200":
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, service]
+                properties:
+                  status:
+                    type: string
+                  service:
+                    type: string
+  /api/v1/channels/demo:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Demo channel
+      responses:
+        "200":
+          description: Demo channel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Channel"
+  /api/v1/videos/demo:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Demo video
+      responses:
+        "200":
+          description: Demo video
+          content:
+            application/json:
+              schema:
+                $ref: "./video.schema.json"
+  /api/v1/demo:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Demo video and channel
+      responses:
+        "200":
+          description: Demo payload
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [video, channel]
+                properties:
+                  video:
+                    $ref: "./video.schema.json"
+                  channel:
+                    $ref: "#/components/schemas/Channel"
+  /v1/policies:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Active demo policy
+      responses:
+        "200":
+          description: Policy summary
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [policies]
+                properties:
+                  policies:
+                    type: array
+                    items:
+                      type: object
+  /v1/demo/state:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Current demo state and ledger
+      responses:
+        "200":
+          description: Demo snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemoState"
+  /v1/demo/reset:
+    servers:
+      - url: http://localhost:8082
+    post:
+      tags: [moderation]
+      summary: Clear action state and append a reset record
+      security:
+        - {}
+        - demoToken: []
+      responses:
+        "200":
+          description: Reset snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemoState"
+        "401":
+          description: Demo token required
+  /v1/actions:
+    servers:
+      - url: http://localhost:8082
+    post:
+      tags: [moderation]
+      summary: Create a demo enforcement action
+      security:
+        - {}
+        - demoToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActionCreate"
+      responses:
+        "201":
+          description: Created action
+          content:
+            application/json:
+              schema:
+                $ref: "./enforcement-action.schema.json"
+        "401":
+          description: Demo token required
+        "409":
+          description: An active action already exists
+  /v1/actions/{action_id}/appeal:
+    servers:
+      - url: http://localhost:8082
+    post:
+      tags: [moderation]
+      summary: File an appeal
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - name: action_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppealCreate"
+      responses:
+        "201":
+          description: Filed appeal
+          content:
+            application/json:
+              schema:
+                $ref: "./appeal.schema.json"
+        "409":
+          description: Appeal window closed or appeal not allowed
+  /v1/appeals/{appeal_id}/decide:
+    servers:
+      - url: http://localhost:8082
+    post:
+      tags: [moderation]
+      summary: Decide an appeal
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - name: appeal_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppealDecision"
+      responses:
+        "200":
+          description: Updated demo snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemoState"
+  /v1/ledger:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Read the ledger
+      responses:
+        "200":
+          description: Ledger and verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ledger, verification]
+                properties:
+                  ledger:
+                    type: array
+                    items:
+                      $ref: "./audit-record.schema.json"
+                  verification:
+                    $ref: "#/components/schemas/Verification"
+  /v1/ledger/verify:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Verify the hash chain
+      responses:
+        "200":
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Verification"
+  /v1/ledger/export:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Export the ledger
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [jsonl, csv]
+            default: jsonl
+      responses:
+        "200":
+          description: Ledger file
+          content:
+            application/x-ndjson:
+              schema:
+                type: string
+            text/csv:
+              schema:
+                type: string
+components:
+  securitySchemes:
+    demoToken:
+      type: http
+      scheme: bearer
+  schemas:
+    Channel:
+      type: object
+      additionalProperties: false
+      required: [id, name, handle]
+      properties:
+        id:
+          type: string
+          pattern: "^ch_[a-zA-Z0-9_]+$"
+        name:
+          type: string
+        handle:
+          type: string
+    Verification:
+      type: object
+      required: [valid, records, head, first_broken, reason]
+      properties:
+        valid:
+          type: boolean
+        records:
+          type: integer
+        head:
+          type: string
+        first_broken:
+          type: [integer, "null"]
+        reason:
+          type: [string, "null"]
+    DemoState:
+      type: object
+      required: [action, appeal, appeals, case, ledger, policy, verification]
+      properties:
+        action:
+          oneOf:
+            - $ref: "./enforcement-action.schema.json"
+            - type: "null"
+        appeal:
+          oneOf:
+            - $ref: "./appeal.schema.json"
+            - type: "null"
+        appeals:
+          type: array
+          items:
+            $ref: "./appeal.schema.json"
+        case:
+          oneOf:
+            - $ref: "./moderation-case.schema.json"
+            - type: "null"
+        ledger:
+          type: array
+          items:
+            $ref: "./audit-record.schema.json"
+        policy:
+          type: object
+        verification:
+          $ref: "#/components/schemas/Verification"
+    ActionCreate:
+      type: object
+      additionalProperties: false
+      required: [video_id, policy_clause, reason, evidence]
+      properties:
+        video_id:
+          type: string
+          pattern: "^vid_[a-zA-Z0-9_]+$"
+        policy_clause:
+          type: string
+          minLength: 1
+        reason:
+          type: string
+          minLength: 1
+        evidence:
+          type: array
+          minItems: 1
+          items:
+            type: string
+    AppealCreate:
+      type: object
+      additionalProperties: false
+      required: [grounds, statement]
+      properties:
+        grounds:
+          type: string
+          enum:
+            - new_evidence
+            - procedural_error
+            - policy_misapplication
+            - identity
+            - other
+        statement:
+          type: string
+          minLength: 1
+    AppealDecision:
+      type: object
+      additionalProperties: false
+      required: [decision, reasoning]
+      properties:
+        decision:
+          type: string
+          enum: [reverse, uphold]
+        reasoning:
+          type: string
+          minLength: 1

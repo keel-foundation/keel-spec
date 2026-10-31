@@ -21,12 +21,12 @@
   "properties": {
     "id": {
       "type": "string",
-      "pattern": "^vid_[a-zA-Z0-9]+$",
+      "pattern": "^vid_[a-zA-Z0-9_]+$",
       "description": "Stable, opaque video identifier."
     },
     "channel_id": {
       "type": "string",
-      "pattern": "^ch_[a-zA-Z0-9]+$"
+      "pattern": "^ch_[a-zA-Z0-9_]+$"
     },
     "title": {
       "type": "string",

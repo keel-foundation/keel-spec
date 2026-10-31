@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:keel:schema:signal:0.1",
+  "title": "Signal",
+  "description": "An observation that may become evidence. A signal is never a final decision.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "source", "signal_type", "created_at"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^sig_[a-zA-Z0-9]+$"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["automated", "user_report", "priority_flagger", "instance", "court_order"]
+    },
+    "signal_type": {
+      "type": "string",
+      "enum": [
+        "spam",
+        "scam",
+        "piracy",
+        "impersonation",
+        "harassment",
+        "csam",
+        "copyright",
+        "terrorism",
+        "other"
+      ]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "model_version": {
+      "type": "string"
+    },
+    "evidence_ref": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

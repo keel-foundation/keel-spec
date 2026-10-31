@@ -3,3 +3,6 @@
 .env.*
 !.env.example
 tmp/
+.venv/
+__pycache__/
+*.py[cod]

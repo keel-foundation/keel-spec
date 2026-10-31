@@ -1,0 +1,13 @@
+{
+  "id": "apl_demo0001",
+  "action_id": "act_demo0001",
+  "appellant": "creator:demo",
+  "grounds": "policy_misapplication",
+  "statement": "Original documentary. All footage is owned, scripted, and edited by the creator.",
+  "submitted_at": "2026-10-31T00:00:00Z",
+  "status": "decided",
+  "reviewer": "demo-appeals-reviewer",
+  "decision": "reverse",
+  "reasoning": "Human review confirmed original production. The pattern match was a false positive.",
+  "decided_at": "2026-10-31T00:00:00Z"
+}

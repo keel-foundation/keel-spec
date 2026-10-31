@@ -1,0 +1,10 @@
+{
+  "seq": 1,
+  "type": "enforcement_action.created",
+  "at": "2026-10-31T00:00:00Z",
+  "payload": {
+    "id": "act_demo0001"
+  },
+  "prev_hash": "GENESIS",
+  "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}

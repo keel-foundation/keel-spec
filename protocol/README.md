@@ -10,4 +10,4 @@ Normative protocol documents live here once ratified. RFC-0001 is the starting p
 - `export-format.md` — the portable creator archive.
 - `payout-ledger.md` — double-entry ledger and holdback rules.
 
-Until a document is ratified, RFC-0001 and the Constitution are the source of truth.
+Until a document is ratified, RFC-0001 and the public Creator rights summary are the public source of truth. The full Constitution remains private until ratification.

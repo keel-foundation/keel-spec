@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:keel:schema:appeal:0.1",
+  "title": "Appeal",
+  "description": "A creator challenge to an enforcement action, with an independent reviewer and a written outcome.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "action_id",
+    "appellant",
+    "grounds",
+    "statement",
+    "submitted_at",
+    "status",
+    "reviewer",
+    "decision",
+    "reasoning",
+    "decided_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^apl_[a-zA-Z0-9]+$"
+    },
+    "action_id": {
+      "type": "string",
+      "pattern": "^act_[a-zA-Z0-9]+$"
+    },
+    "appellant": {
+      "type": "string",
+      "minLength": 1
+    },
+    "grounds": {
+      "type": "string",
+      "enum": [
+        "new_evidence",
+        "procedural_error",
+        "policy_misapplication",
+        "identity",
+        "other"
+      ]
+    },
+    "statement": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "decided"]
+    },
+    "reviewer": {
+      "type": ["string", "null"]
+    },
+    "decision": {
+      "type": ["string", "null"],
+      "enum": ["reverse", "uphold", null]
+    },
+    "reasoning": {
+      "type": ["string", "null"]
+    },
+    "decided_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    }
+  }
+}

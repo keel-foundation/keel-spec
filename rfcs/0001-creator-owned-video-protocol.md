@@ -15,7 +15,7 @@
 
 TubeKeel is an open, federated protocol for creator-owned video. It is designed to interoperate with PeerTube through ActivityPub where PeerTube's object model is sufficient, and to extend that model with portable creator identity, moderation records, appealable enforcement, content protection, and transparent payouts.
 
-This RFC defines the protocol direction, the compatibility boundary, the moderation-first data model, and the first implementation milestones. It does not define every endpoint or schema; those follow in later RFCs and in `spec/protocol/`.
+This RFC defines the protocol direction, the compatibility boundary, the moderation-first data model, and the first implementation milestones. It does not define every endpoint or schema; those follow in later RFCs and in `keel-spec/protocol/`.
 
 The central claim is simple: **a video protocol is not legitimate if it can erase a creator's livelihood without specific notice, human review, a real appeal, and a portable exit.**
 
@@ -106,7 +106,7 @@ An instance is "PeerTube-compatible" for the purposes of this RFC when it can:
 4. expose its own actors and videos in a form PeerTube can follow;
 5. preserve attribution and license metadata across federation.
 
-Full compatibility is tested against a pinned PeerTube release in `spec/protocol/peertube-compat.md`. Compatibility claims MUST be versioned and tested, not asserted.
+Full compatibility is tested against a pinned PeerTube release in `keel-spec/protocol/peertube-compat.md`. Compatibility claims MUST be versioned and tested, not asserted.
 
 ### 6.2 Reused vocabulary
 
@@ -142,7 +142,7 @@ Moderation records are not silently federated. An instance MAY publish:
 - content-protection labels;
 - a public blocklist of instances or actors.
 
-An instance MUST NOT publish another creator's private evidence or personal data. Cross-instance moderation follows the Instance Covenant and the label semantics in `spec/protocol/moderation-labels.md`.
+An instance MUST NOT publish another creator's private evidence or personal data. Cross-instance moderation follows the Instance Covenant and the label semantics in `keel-spec/protocol/moderation-labels.md`.
 
 ### 6.5 Import and migration
 
@@ -163,7 +163,7 @@ Import MUST preserve content hashes so that attribution and piracy matching surv
 
 A **Signal** is an observation, not a decision. It has:
 
-- `signal_id`;
+- `id`;
 - `source` (`automated`, `user_report`, `priority_flagger`, `instance`, `court_order`);
 - `signal_type` (`spam`, `scam`, `piracy`, `impersonation`, `harassment`, `csam`, `copyright`, `other`);
 - `confidence` and `model_version` where automated;
@@ -176,10 +176,11 @@ Signals MAY be combined into a case. Signals alone MUST NOT terminate a channel.
 
 A **ModerationCase** groups signals, content, and history for human review. It has:
 
-- `case_id`;
+- `id`;
 - `subject` (video, channel, account, or instance);
 - `policy_refs`;
-- `evidence_bundle`;
+- `signals`;
+- `evidence`;
 - `severity`;
 - `status` (`open`, `reviewing`, `decided`, `appealed`, `closed`);
 - `assignee` and `reviewer`;
@@ -189,7 +190,7 @@ A **ModerationCase** groups signals, content, and history for human review. It h
 
 An **EnforcementAction** is a decision. It MUST include:
 
-- `action_id`;
+- `id`;
 - `case_id`;
 - `action_type` (`warn`, `remove`, `age_restrict`, `demonetize`, `suspend`, `terminate`, `label`, `downrank`);
 - `scope` (`video`, `channel`, `account`, `instance`);
@@ -206,11 +207,13 @@ Channel-level termination and permanent demonetization MUST have a human reviewe
 
 An **Appeal** MUST be available for every enforcement action. It has:
 
-- `appeal_id`;
+- `id`;
 - `action_id`;
 - `appellant`;
 - `grounds` (`new_evidence`, `procedural_error`, `policy_misapplication`, `identity`, `other`);
+- `statement`;
 - `submitted_at`;
+- `status` (`pending`, `decided`);
 - `reviewer` (independent of the original decision);
 - `decision` and `reasoning`;
 - `decided_at`.
@@ -222,8 +225,10 @@ The appeals service MUST enforce the service levels in the Constitution, Schedul
 Every action, review, and appeal MUST be recorded in an append-only, hash-chained ledger:
 
 ```
-record_hash = SHA-256(prev_hash || canonical_json(record))
+record_hash = SHA-256(canonical_json({seq, type, at, payload, prev_hash}))
 ```
+
+The previous hash and sequence number are part of the canonical input, so reordering or relinking records breaks verification. The current demo stores the ledger as append-only JSONL and verifies it on load.
 
 The ledger MUST be exportable. Creators MUST be able to read their own records. The public MUST be able to read aggregates and redacted decisions. A periodic anchor (for example, a signed daily digest) provides tamper evidence outside the database.
 
@@ -254,7 +259,7 @@ Content protection is a protocol layer, not a support queue:
 
 ## 8. Core data model
 
-The first schemas live in `spec/schemas/`. The minimum objects are:
+The first schemas live in `keel-spec/schemas/`. The minimum objects are:
 
 - `Actor` — a person, channel, or instance actor with keys and inbox/outbox.
 - `Channel` — a creator's public identity and subscription target.
@@ -273,7 +278,7 @@ All identifiers are opaque, globally unique, and stable across export/import.
 
 ## 9. API surface (v1 draft)
 
-The API is versioned under `/api/v1`. The first endpoints are:
+The API is versioned under `/api/v1`. The current local demo implements `/api/v1/demo` in core and the `/v1/actions`, `/v1/appeals`, and `/v1/ledger` endpoints in moderation. The table below is the v1 target surface.
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -291,7 +296,7 @@ The API is versioned under `/api/v1`. The first endpoints are:
 | `GET` | `/exports/{channel}` | Request an export bundle |
 | `GET` | `/payouts/{channel}` | Ledger and payout status |
 
-Federation endpoints follow ActivityPub and are documented separately. The OpenAPI document will be generated from `spec/schemas/openapi.yaml` once the first schemas are stable.
+Federation endpoints follow ActivityPub and are documented separately. The current demo contract is in `keel-spec/schemas/openapi.yaml`; the v1 document will grow from it as the first schemas stabilize.
 
 ---
 
@@ -347,6 +352,17 @@ Portability is a protocol requirement:
 
 Each phase has a public demo and a written retrospective. No phase is "done" until the Creator Covenant tests pass.
 
+### 13.1 Current implementation status
+
+As of 31 October 2026:
+
+- Draft schemas exist for video, signal, moderation case, enforcement action, appeal, and audit records.
+- The local demo implements a synthetic automated signal, a case, an enforcement action, an independent appeal review, and a hash-chained JSONL ledger with verification and export.
+- PostgreSQL persistence, real signal ingestion, policy bundles, federation, payouts, content protection, and production authentication are not implemented.
+- The public Creator Covenant summary and appeal guide live in `keel-docs`.
+
+The demo is intentionally narrow. It is evidence that the appeal flow and ledger contract can be exercised end to end, not evidence that the production system exists.
+
 ---
 
 ## 14. Open questions
@@ -378,9 +394,9 @@ Each phase has a public demo and a written retrospective. No phase is "done" unt
 This RFC is a **draft**. It is accepted when:
 
 1. the PeerTube compatibility matrix is reviewed by at least two implementers;
-2. the moderation data model is reviewed by the Maintainer Council and the Creators' Council;
+2. the moderation data model is reviewed by the Maintainer Council and the Creators' Council, or by the interim bodies under Article XV until those bodies are seated;
 3. the security and privacy sections are reviewed by counsel;
-4. the first three schemas are published in `spec/schemas/`;
-5. the Maintainer Council records a decision in the public decision log.
+4. the video, signal, moderation-case, enforcement-action, appeal, and audit-record schemas are published in `keel-spec/schemas/` with examples that pass CI;
+5. the Maintainer Council, or the interim bodies under Article XV, records a decision in the public decision log.
 
 Comments should be filed in the RFC discussion. Silence is not consent for protocol-breaking changes.

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:keel:schema:audit-record:0.1",
+  "title": "Audit Record",
+  "description": "An append-only, hash-chained audit journal entry. The hash covers seq, type, at, payload, and prev_hash.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["seq", "type", "at", "payload", "prev_hash", "hash"],
+  "properties": {
+    "seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "payload": {
+      "type": "object"
+    },
+    "prev_hash": {
+      "type": "string",
+      "pattern": "^(GENESIS|sha256:[a-f0-9]{64})$"
+    },
+    "hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  }
+}

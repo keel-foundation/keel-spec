@@ -1,16 +1,24 @@
 # TubeKeel Specification
 
-This directory contains the normative protocol specification, RFCs, schemas, and policy language for TubeKeel.
+This repository contains the normative protocol specification, RFCs, schemas, and policy language for TubeKeel.
 
 ## Contents
 
 - `rfcs/` — numbered requests for comments. RFC-0001 defines the protocol direction.
 - `protocol/` — normative protocol documents once ratified.
-- `schemas/` — JSON Schemas, OpenAPI fragments, and event schemas.
+- `schemas/` — JSON Schemas, examples, the demo OpenAPI document, and schema validation.
+
+## Checks
+
+```sh
+python3 -m venv .venv
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python scripts/validate_schemas.py
+```
 
 ## Licensing
 
-Specification text and RFCs are licensed under CC-BY-4.0. Code samples are licensed under AGPL-3.0 unless stated otherwise.
+Specification text, RFCs, examples, and this repository are licensed under [CC-BY-4.0](LICENSE). Code samples are licensed under AGPL-3.0 unless stated otherwise.
 
 ## RFC process
 
@@ -18,8 +26,12 @@ Specification text and RFCs are licensed under CC-BY-4.0. Code samples are licen
 2. Draft an RFC using the format in RFC-0001.
 3. Publish it in `rfcs/` with the next number.
 4. Allow at least fourteen days for comment; thirty days for constitutional or protocol-breaking changes.
-5. The Maintainer Council and, where Creator rights are affected, the Creators' Council review it under the Constitution.
-6. Accepted RFCs are normative. Rejected RFCs remain in the archive with the reasons.
+5. The Maintainer Council and, where Creator rights are affected, the Creators' Council review it under the Constitution. Until those bodies are seated, the Interim Board and Interim Creators' Council review it under Article XV.
+6. Accepted RFCs are normative. Rejected RFCs remain in the archive with the reasons. Every decision is recorded in the public decision log.
+
+## Public decision log
+
+Decisions are recorded in [`DECISIONS.md`](DECISIONS.md). A decision entry names the decision, rationale, decision-maker, date, and whether it changes the protocol.
 
 ## Normative language
 
