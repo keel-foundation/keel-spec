@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:keel:schema:video:0.1",
+  "title": "Video",
+  "description": "A TubeKeel video manifest. The content hash is over the canonical media manifest, not the transcoded renditions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "channel_id",
+    "title",
+    "status",
+    "visibility",
+    "content_hash",
+    "duration_seconds",
+    "playback",
+    "license",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^vid_[a-zA-Z0-9]+$",
+      "description": "Stable, opaque video identifier."
+    },
+    "channel_id": {
+      "type": "string",
+      "pattern": "^ch_[a-zA-Z0-9]+$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 10000,
+      "default": ""
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "processing", "published", "removed", "demonetized"]
+    },
+    "visibility": {
+      "type": "string",
+      "enum": ["public", "unlisted", "private"]
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "SHA-256 over the canonical media manifest."
+    },
+    "duration_seconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "playback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mp4_url"],
+      "properties": {
+        "mp4_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "hls_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "thumbnail_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "captions_url": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "license": {
+      "type": "string",
+      "enum": ["standard", "cc-by", "cc-by-sa", "cc0", "all-rights-reserved"]
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "policy_version": {
+          "type": "string"
+        },
+        "monetization_status": {
+          "type": "string",
+          "enum": ["eligible", "limited", "ineligible", "unknown"]
+        }
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "published_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

@@ -8,10 +8,10 @@ JSON Schemas and OpenAPI fragments for the protocol.
 |---|---|---|
 | `actor.schema.json` | TODO | Actor, keys, inbox/outbox |
 | `channel.schema.json` | TODO | Creator channel |
-| `video.schema.json` | TODO | Video manifest, hashes, captions, license |
+| `video.schema.json` | Draft 0.1 | Video manifest, hashes, captions, license |
 | `signal.schema.json` | TODO | Detection signal |
-| `moderation-case.schema.json` | TODO | Case and evidence bundle |
-| `enforcement-action.schema.json` | TODO | Decision and Statement of Reasons |
+| `moderation-case.schema.json` | Draft 0.1 | Case and evidence bundle |
+| `enforcement-action.schema.json` | Draft 0.1 | Decision and Statement of Reasons |
 | `appeal.schema.json` | TODO | Appeal and decision |
 | `audit-record.schema.json` | TODO | Hash-chained ledger entry |
 | `payout-entry.schema.json` | TODO | Double-entry ledger line |
