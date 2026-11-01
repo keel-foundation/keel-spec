@@ -9,5 +9,6 @@ This log records decisions that affect the protocol, the repositories, and the p
 | 2026-10-31 | The demo is local-only and uses a synthetic classifier signal | Avoid overstating the current implementation while the real pipeline is built | TubeKeel maintainers | Accepted |
 | 2026-10-31 | The audit ledger is append-only JSONL with a verifiable hash chain | Make the trust primitive testable before moving it to PostgreSQL and an external anchor | TubeKeel maintainers | Accepted |
 | 2026-10-31 | Public governance summaries are published while the full Constitution remains private until ratification | Give creators the rights and appeal process without publishing unratified private records | TubeKeel maintainers | Accepted |
+| 2026-11-01 | Freeze the moderation v0.1 contract | Roles, appeals, queue, ledger, and contract tests are stable enough to build the console against; add to v0.1 only in a backward-compatible way, otherwise supersede with v0.2 | TubeKeel maintainers | Accepted |
 
 Add a row when a decision is made. Do not edit history; supersede an entry with a new row.

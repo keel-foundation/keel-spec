@@ -354,14 +354,23 @@ Each phase has a public demo and a written retrospective. No phase is "done" unt
 
 ### 13.1 Current implementation status
 
-As of 31 October 2026:
+As of 1 November 2026:
 
-- Draft schemas exist for video, signal, moderation case, enforcement action, appeal, and audit records.
-- The local demo implements a synthetic automated signal, a case, an enforcement action, an independent appeal review, and a hash-chained JSONL ledger with verification and export.
-- PostgreSQL persistence, real signal ingestion, policy bundles, federation, payouts, content protection, and production authentication are not implemented.
+- Draft schemas exist for actor, channel, playback manifest, video, signal, moderation case,
+  enforcement action, appeal, and audit records, with examples and CI validation.
+- Core is PostgreSQL-backed for actors, channels, and videos, with migrations, an idempotent seed
+  command, DB-backed video/channel endpoints, and a dev-only auth adapter.
+- The web client has a public watch page backed by core metadata and the demo clip, with
+  loading, not-found, removed, private, and playback-error states.
+- Moderation persists workflow state in SQLite, supports creator/moderator/appeals role
+  separation, enforces reviewer independence, exposes a review queue, and keeps the hash-chained
+  JSONL ledger with verification and export.
+- Upload, transcoding, HLS, subscriptions, real signal ingestion, policy bundles, federation,
+  payouts, content protection, and production authentication are not implemented.
 - The public Creator Covenant summary and appeal guide live in `keel-docs`.
 
-The demo is intentionally narrow. It is evidence that the appeal flow and ledger contract can be exercised end to end, not evidence that the production system exists.
+The demo is intentionally narrow. It is evidence that the creator-to-viewer-to-moderator loop and
+the ledger contract can be exercised end to end, not evidence that the production system exists.
 
 ---
 

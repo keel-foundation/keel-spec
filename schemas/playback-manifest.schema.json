@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:keel:schema:playback-manifest:0.1",
+  "title": "Playback Manifest",
+  "description": "Playback locations for a video. HLS is preferred when available; MP4 is the fallback.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mp4_url"],
+  "properties": {
+    "mp4_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "hls_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "thumbnail_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "captions_url": {
+      "type": "string",
+      "format": "uri"
+    }
+  }
+}

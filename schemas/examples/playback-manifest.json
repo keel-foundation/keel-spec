@@ -1,0 +1,4 @@
+{
+  "mp4_url": "http://localhost:8081/demo/sample.mp4",
+  "captions_url": "http://localhost:3000/demo/sample.vtt"
+}

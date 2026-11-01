@@ -6,6 +6,9 @@ info:
     Draft contract for the local TubeKeel demo. Core runs on port 8080 and
     moderation runs on port 8082. The demo token is optional locally and
     required when TUBEKEEL_DEMO_TOKEN is set.
+
+    Moderation v0.1 is frozen as of 2026-11-01. Additive changes only until
+    v0.2; see DECISIONS.md.
   license:
     name: CC-BY-4.0
     url: https://creativecommons.org/licenses/by/4.0/
@@ -42,7 +45,28 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Channel"
+                $ref: "./channel.schema.json"
+  /api/v1/channels/{id}:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read a channel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Channel
+          content:
+            application/json:
+              schema:
+                $ref: "./channel.schema.json"
+        "404":
+          description: Channel not found
   /api/v1/videos/demo:
     servers:
       - url: http://localhost:8080
@@ -56,6 +80,27 @@ paths:
             application/json:
               schema:
                 $ref: "./video.schema.json"
+  /api/v1/videos/{id}:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read a video
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Video
+          content:
+            application/json:
+              schema:
+                $ref: "./video.schema.json"
+        "404":
+          description: Video not found
   /api/v1/demo:
     servers:
       - url: http://localhost:8080
@@ -74,7 +119,27 @@ paths:
                   video:
                     $ref: "./video.schema.json"
                   channel:
-                    $ref: "#/components/schemas/Channel"
+                    $ref: "./channel.schema.json"
+  /api/v1/me:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Current dev principal
+      description: |
+        Dev-only identity adapter. When TUBEKEEL_DEV_ACTOR_TOKEN is set, a
+        matching bearer token is required. Full OIDC is not implemented yet.
+      security:
+        - devToken: []
+      responses:
+        "200":
+          description: Current principal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Principal"
+        "401":
+          description: A dev actor token is required
   /v1/policies:
     servers:
       - url: http://localhost:8082
@@ -369,19 +434,24 @@ components:
     demoToken:
       type: http
       scheme: bearer
+    devToken:
+      type: http
+      scheme: bearer
+      description: Dev-only actor token for core; set TUBEKEEL_DEV_ACTOR_TOKEN.
   schemas:
     Channel:
+      $ref: "./channel.schema.json"
+    Principal:
       type: object
       additionalProperties: false
-      required: [id, name, handle]
+      required: [id, role]
       properties:
         id:
           type: string
-          pattern: "^ch_[a-zA-Z0-9_]+$"
-        name:
+          minLength: 1
+        role:
           type: string
-        handle:
-          type: string
+          minLength: 1
     Verification:
       type: object
       required: [valid, records, head, first_broken, reason]

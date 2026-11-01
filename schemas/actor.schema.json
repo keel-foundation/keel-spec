@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:keel:schema:actor:0.1",
+  "title": "Actor",
+  "description": "A person, channel, or instance actor with stable identity and optional federation endpoints.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "type", "handle", "display_name", "created_at", "updated_at"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^usr_[a-zA-Z0-9_]+$",
+      "description": "Stable, opaque actor identifier."
+    },
+    "type": {
+      "type": "string",
+      "enum": ["person", "channel", "instance"]
+    },
+    "handle": {
+      "type": "string",
+      "pattern": "^@[a-zA-Z0-9_]+$"
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "public_key": {
+      "type": "string",
+      "description": "PEM-encoded public key for federation signatures."
+    },
+    "inbox_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "outbox_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

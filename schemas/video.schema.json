@@ -56,27 +56,7 @@
       "minimum": 0
     },
     "playback": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["mp4_url"],
-      "properties": {
-        "mp4_url": {
-          "type": "string",
-          "format": "uri"
-        },
-        "hls_url": {
-          "type": "string",
-          "format": "uri"
-        },
-        "thumbnail_url": {
-          "type": "string",
-          "format": "uri"
-        },
-        "captions_url": {
-          "type": "string",
-          "format": "uri"
-        }
-      }
+      "$ref": "./playback-manifest.schema.json"
     },
     "license": {
       "type": "string",
