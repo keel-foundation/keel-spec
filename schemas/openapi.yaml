@@ -125,6 +125,8 @@ paths:
                 $ref: "#/components/schemas/DemoState"
         "401":
           description: Demo token required
+        "403":
+          description: A moderator role is required
         "429":
           description: Rate limit exceeded
   /v1/actions:
@@ -151,6 +153,8 @@ paths:
                 $ref: "./enforcement-action.schema.json"
         "401":
           description: Demo token required
+        "403":
+          description: A moderator role is required
         "409":
           description: An active action already exists
         "422":
@@ -185,6 +189,10 @@ paths:
             application/json:
               schema:
                 $ref: "./appeal.schema.json"
+        "401":
+          description: Demo token required
+        "403":
+          description: A creator role is required
         "409":
           description: Appeal window closed or appeal not allowed
         "422":
@@ -219,10 +227,86 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DemoState"
+        "401":
+          description: Demo token required
+        "403":
+          description: An appeals role is required, or the reviewer is not independent
+        "404":
+          description: Appeal not found
+        "409":
+          description: Appeal already decided
         "422":
           description: Request validation failed
         "429":
           description: Rate limit exceeded
+  /v1/whoami:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Resolve the current principal
+      security:
+        - {}
+        - demoToken: []
+      responses:
+        "200":
+          description: Current principal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhoAmI"
+        "401":
+          description: A role or demo token is required
+  /v1/appeals:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: List appeals
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, decided]
+      responses:
+        "200":
+          description: Appeals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppealList"
+        "403":
+          description: A moderator or appeals role is required
+  /v1/appeals/{appeal_id}:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Read an appeal
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - name: appeal_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Appeal
+          content:
+            application/json:
+              schema:
+                $ref: "./appeal.schema.json"
+        "403":
+          description: A moderator or appeals role is required
+        "404":
+          description: Appeal not found
   /v1/ledger:
     servers:
       - url: http://localhost:8082
@@ -312,6 +396,26 @@ components:
           type: [integer, "null"]
         reason:
           type: [string, "null"]
+    WhoAmI:
+      type: object
+      additionalProperties: false
+      required: [id, role]
+      properties:
+        id:
+          type: string
+          minLength: 1
+        role:
+          type: string
+          enum: [creator, moderator, appeals, operator]
+    AppealList:
+      type: object
+      additionalProperties: false
+      required: [appeals]
+      properties:
+        appeals:
+          type: array
+          items:
+            $ref: "./appeal.schema.json"
     DemoState:
       type: object
       required: [action, appeal, appeals, case, ledger, policy, verification]
