@@ -1,6 +1,6 @@
-# TubeKeel Specification
+# KeelTube Specification
 
-This repository contains the normative protocol specification, RFCs, schemas, and policy language for TubeKeel.
+This repository contains the normative protocol specification, RFCs, schemas, and policy language for KeelTube.
 
 ## Contents
 

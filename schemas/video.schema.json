@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:keel:schema:video:0.1",
   "title": "Video",
-  "description": "A TubeKeel video manifest. The content hash is over the canonical media manifest, not the transcoded renditions.",
+  "description": "A KeelTube video manifest. The content hash is over the canonical media manifest, not the transcoded renditions.",
   "type": "object",
   "additionalProperties": false,
   "required": [

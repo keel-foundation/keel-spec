@@ -1,11 +1,11 @@
 openapi: 3.1.0
 info:
-  title: TubeKeel demo API
+  title: KeelTube demo API
   version: 0.1.0
   description: |
-    Draft contract for the local TubeKeel demo. Core runs on port 8080 and
+    Draft contract for the local KeelTube demo. Core runs on port 8080 and
     moderation runs on port 8082. The demo token is optional locally and
-    required when TUBEKEEL_DEMO_TOKEN is set.
+    required when KEELTUBE_DEMO_TOKEN is set.
 
     Moderation v0.1 is frozen as of 2026-11-01. Additive changes only until
     v0.2; see DECISIONS.md.
@@ -127,7 +127,7 @@ paths:
       tags: [core]
       summary: Current dev principal
       description: |
-        Dev-only identity adapter. When TUBEKEEL_DEV_ACTOR_TOKEN is set, a
+        Dev-only identity adapter. When KEELTUBE_DEV_ACTOR_TOKEN is set, a
         matching bearer token is required. Full OIDC is not implemented yet.
       security:
         - devToken: []
@@ -437,7 +437,7 @@ components:
     devToken:
       type: http
       scheme: bearer
-      description: Dev-only actor token for core; set TUBEKEEL_DEV_ACTOR_TOKEN.
+      description: Dev-only actor token for core; set KEELTUBE_DEV_ACTOR_TOKEN.
   schemas:
     Channel:
       $ref: "./channel.schema.json"
