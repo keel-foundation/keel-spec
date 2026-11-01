@@ -12,9 +12,12 @@ This repository contains the normative protocol specification, RFCs, schemas, an
 
 ```sh
 python3 -m venv .venv
-.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/pip install -r requirements-dev.lock
 .venv/bin/python scripts/validate_schemas.py
 ```
+
+`requirements-dev.lock` pins the full development dependency set. `requirements-dev.txt` lists
+the direct dependencies; regenerate the lock after changing it.
 
 ## Licensing
 

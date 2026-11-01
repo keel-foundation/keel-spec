@@ -125,6 +125,8 @@ paths:
                 $ref: "#/components/schemas/DemoState"
         "401":
           description: Demo token required
+        "429":
+          description: Rate limit exceeded
   /v1/actions:
     servers:
       - url: http://localhost:8082
@@ -151,6 +153,10 @@ paths:
           description: Demo token required
         "409":
           description: An active action already exists
+        "422":
+          description: Request validation failed
+        "429":
+          description: Rate limit exceeded
   /v1/actions/{action_id}/appeal:
     servers:
       - url: http://localhost:8082
@@ -181,6 +187,10 @@ paths:
                 $ref: "./appeal.schema.json"
         "409":
           description: Appeal window closed or appeal not allowed
+        "422":
+          description: Request validation failed
+        "429":
+          description: Rate limit exceeded
   /v1/appeals/{appeal_id}/decide:
     servers:
       - url: http://localhost:8082
@@ -209,6 +219,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DemoState"
+        "422":
+          description: Request validation failed
+        "429":
+          description: Rate limit exceeded
   /v1/ledger:
     servers:
       - url: http://localhost:8082
@@ -334,15 +348,19 @@ components:
         video_id:
           type: string
           pattern: "^vid_[a-zA-Z0-9_]+$"
+          maxLength: 80
         policy_clause:
           type: string
           minLength: 1
+          maxLength: 128
         reason:
           type: string
           minLength: 1
+          maxLength: 2000
         evidence:
           type: array
           minItems: 1
+          maxItems: 50
           items:
             type: string
     AppealCreate:
@@ -361,6 +379,7 @@ components:
         statement:
           type: string
           minLength: 1
+          maxLength: 4000
     AppealDecision:
       type: object
       additionalProperties: false
@@ -372,3 +391,4 @@ components:
         reasoning:
           type: string
           minLength: 1
+          maxLength: 4000
