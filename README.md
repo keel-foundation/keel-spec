@@ -13,8 +13,10 @@ This repository contains the normative protocol specification, RFCs, schemas, an
 - Schemas exist for actors, channels, playback manifests, videos, signals, moderation cases,
   enforcement actions, appeals, and audit records, with examples and CI validation.
 - Moderation v0.1 is frozen as of 2026-11-01. Additive changes only until v0.2.
-- Core is PostgreSQL-backed; the web client has a public watch page. Upload, transcoding,
-  subscriptions, federation, payouts, and the production moderation console are not implemented.
+- Core is PostgreSQL-backed; the web client is fully built against local preview data, including
+  the feed, watch page, channels, search, library, creator studio, and moderation console. Upload,
+  transcoding, subscriptions, federation, payouts, and the production moderation console are not
+  implemented.
 
 ## Checks
 
