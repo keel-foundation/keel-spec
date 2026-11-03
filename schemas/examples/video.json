@@ -12,5 +12,19 @@
   },
   "license": "cc-by",
   "created_at": "2026-10-31T00:00:00Z",
-  "updated_at": "2026-10-31T00:00:00Z"
+  "updated_at": "2026-10-31T00:00:00Z",
+  "public_id": "ksKCMmvOxwQ",
+  "format": "video",
+  "category": "Documentaries",
+  "tags": [
+    "documentary",
+    "lighthouse"
+  ],
+  "views": 1842000,
+  "likes": 182400,
+  "comments_count": 1284,
+  "policy": {
+    "policy_version": "demo-0.1",
+    "monetization_status": "eligible"
+  }
 }

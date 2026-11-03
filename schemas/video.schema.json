@@ -24,6 +24,11 @@
       "pattern": "^vid_[a-zA-Z0-9_]+$",
       "description": "Stable, opaque video identifier."
     },
+    "public_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9]{11}$",
+      "description": "Public, URL-safe video identifier used by the watch page."
+    },
     "channel_id": {
       "type": "string",
       "pattern": "^ch_[a-zA-Z0-9_]+$"
@@ -62,6 +67,36 @@
       "type": "string",
       "enum": ["standard", "cc-by", "cc-by-sa", "cc0", "all-rights-reserved"]
     },
+    "format": {
+      "type": "string",
+      "enum": ["video", "short"],
+      "description": "Long-form video or short vertical clip."
+    },
+    "category": {
+      "type": "string",
+      "enum": ["Documentaries", "Protocol", "Moderation", "Studio", "Federation"]
+    },
+    "tags": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 50
+      }
+    },
+    "views": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "likes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "comments_count": {
+      "type": "integer",
+      "minimum": 0
+    },
     "policy": {
       "type": "object",
       "additionalProperties": false,
@@ -71,7 +106,26 @@
         },
         "monetization_status": {
           "type": "string",
-          "enum": ["eligible", "limited", "ineligible", "unknown"]
+          "enum": ["eligible", "limited", "ineligible", "unknown", "pending"]
+        },
+        "upload_status": {
+          "type": "string"
+        },
+        "scan_verdict": {
+          "type": "string"
+        },
+        "scan_reason": {
+          "type": "string"
+        },
+        "rights_declaration": {
+          "type": "string",
+          "enum": ["original", "licensed", "public_domain", "fair_use"]
+        },
+        "rights_holder": {
+          "type": "string"
+        },
+        "rights_notes": {
+          "type": "string"
         }
       }
     },

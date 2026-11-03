@@ -34,6 +34,23 @@
       "type": "string",
       "format": "uri"
     },
+    "subscribers": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "verified": {
+      "type": "boolean"
+    },
+    "video_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Public published videos on the channel."
+    },
+    "total_views": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Cumulative views across public published videos."
+    },
     "created_at": {
       "type": "string",
       "format": "date-time"

@@ -32,7 +32,7 @@ example, and validates `openapi.yaml`. CI runs the same command.
 
 The first contracts to ratify are `actor`, `channel`, `playback-manifest`, `video`, `signal`,
 `moderation-case`, `enforcement-action`, `appeal`, and `audit-record`. They are the contract
-between `core`, `pipeline`, `web`, and `moderation`.
+between `core`, `web`, and `moderation`.
 
 ## Required fields for the walking skeleton
 
