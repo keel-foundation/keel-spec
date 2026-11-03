@@ -140,6 +140,175 @@ paths:
                 $ref: "#/components/schemas/Principal"
         "401":
           description: A dev actor token is required
+  /api/v1/videos/{id}/view:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Start a playback session
+      security:
+        - {}
+        - devToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartViewRequest"
+      responses:
+        "200":
+          description: Playback session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StartViewResponse"
+        "404":
+          description: Video not found or not accessible
+        "410":
+          description: Video was removed
+  /api/v1/videos/{id}/view/progress:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Send a playback heartbeat
+      security:
+        - {}
+        - devToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ViewProgressRequest"
+      responses:
+        "200":
+          description: Updated playback session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViewProgressResponse"
+        "404":
+          description: Session or video not found
+  /api/v1/telemetry/events:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Record impression and click telemetry
+      security:
+        - {}
+        - devToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TelemetryBatch"
+      responses:
+        "200":
+          description: Telemetry result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelemetryResult"
+  /api/v1/studio/analytics/summary:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Creator analytics summary
+      security:
+        - devToken: []
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Creator analytics summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsSummaryResponse"
+  /api/v1/studio/analytics/timeseries:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Creator analytics daily time series
+      security:
+        - devToken: []
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Creator analytics points
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsTimeseriesResponse"
+  /api/v1/studio/videos/{id}/analytics:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Per-video creator analytics
+      security:
+        - devToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Per-video analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoAnalyticsResponse"
+        "404":
+          description: Video not found for this creator
   /v1/policies:
     servers:
       - url: http://localhost:8082
@@ -925,6 +1094,250 @@ components:
           type: integer
         channel_id:
           type: string
+    TrafficSource:
+      type: string
+      enum: [feed, explore, search, channel, watch, shorts, external, unknown]
+    StartViewRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        source:
+          $ref: "#/components/schemas/TrafficSource"
+    StartViewResponse:
+      type: object
+      additionalProperties: false
+      required: [video_id, views, session_id, counted, watched_seconds, completed]
+      properties:
+        video_id:
+          type: string
+        views:
+          type: integer
+        session_id:
+          type: string
+        counted:
+          type: boolean
+        watched_seconds:
+          type: number
+        completed:
+          type: boolean
+    ViewProgressRequest:
+      type: object
+      additionalProperties: false
+      required: [session_id, event_id, position_seconds]
+      properties:
+        session_id:
+          type: string
+        event_id:
+          type: string
+          maxLength: 128
+        position_seconds:
+          type: number
+          minimum: 0
+        completed:
+          type: boolean
+          default: false
+    ViewProgressResponse:
+      type: object
+      additionalProperties: false
+      required: [video_id, session_id, views, watched_seconds, watched_delta_seconds, completed]
+      properties:
+        video_id:
+          type: string
+        session_id:
+          type: string
+        views:
+          type: integer
+        watched_seconds:
+          type: number
+        watched_delta_seconds:
+          type: number
+        completed:
+          type: boolean
+    TelemetryEvent:
+      type: object
+      additionalProperties: false
+      required: [event_id, video_id, event_type, source]
+      properties:
+        event_id:
+          type: string
+          maxLength: 128
+        video_id:
+          type: string
+        event_type:
+          type: string
+          enum: [impression, click]
+        source:
+          $ref: "#/components/schemas/TrafficSource"
+        position:
+          type: integer
+          minimum: 0
+          maximum: 10000
+          default: 0
+    TelemetryBatch:
+      type: object
+      additionalProperties: false
+      required: [events]
+      properties:
+        events:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/TelemetryEvent"
+    TelemetryResult:
+      type: object
+      additionalProperties: false
+      required: [accepted, duplicates, rejected]
+      properties:
+        accepted:
+          type: integer
+        duplicates:
+          type: integer
+        rejected:
+          type: integer
+    AnalyticsSource:
+      type: object
+      additionalProperties: false
+      required: [source, views, sessions, watch_seconds, watch_hours, completions, impressions, clicks]
+      properties:
+        source:
+          $ref: "#/components/schemas/TrafficSource"
+        views:
+          type: integer
+        sessions:
+          type: integer
+        watch_seconds:
+          type: number
+        watch_hours:
+          type: number
+        completions:
+          type: integer
+        impressions:
+          type: integer
+        clicks:
+          type: integer
+    AnalyticsSummary:
+      type: object
+      additionalProperties: false
+      required: [views, sessions, watch_seconds, watch_hours, completions, completion_rate, impressions, clicks, click_through_rate, sources]
+      properties:
+        views:
+          type: integer
+        sessions:
+          type: integer
+        watch_seconds:
+          type: number
+        watch_hours:
+          type: number
+        completions:
+          type: integer
+        completion_rate:
+          type: number
+        impressions:
+          type: integer
+        clicks:
+          type: integer
+        click_through_rate:
+          type: number
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsSource"
+    AnalyticsPoint:
+      type: object
+      additionalProperties: false
+      required: [day, views, sessions, watch_seconds, watch_hours, completions, impressions, clicks]
+      properties:
+        day:
+          type: string
+          format: date
+        views:
+          type: integer
+        sessions:
+          type: integer
+        watch_seconds:
+          type: number
+        watch_hours:
+          type: number
+        completions:
+          type: integer
+        impressions:
+          type: integer
+        clicks:
+          type: integer
+    AnalyticsSummaryResponse:
+      type: object
+      additionalProperties: false
+      required: [channel_id, from, to, views, sessions, watch_seconds, watch_hours, completions, completion_rate, impressions, clicks, click_through_rate, sources]
+      properties:
+        channel_id:
+          type: string
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        views:
+          type: integer
+        sessions:
+          type: integer
+        watch_seconds:
+          type: number
+        watch_hours:
+          type: number
+        completions:
+          type: integer
+        completion_rate:
+          type: number
+        impressions:
+          type: integer
+        clicks:
+          type: integer
+        click_through_rate:
+          type: number
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsSource"
+    AnalyticsTimeseriesResponse:
+      type: object
+      additionalProperties: false
+      required: [channel_id, from, to, points]
+      properties:
+        channel_id:
+          type: string
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsPoint"
+    VideoAnalyticsResponse:
+      type: object
+      additionalProperties: false
+      required: [channel_id, video_id, from, to, summary, points]
+      properties:
+        channel_id:
+          type: string
+        video_id:
+          type: string
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        summary:
+          $ref: "#/components/schemas/AnalyticsSummary"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsPoint"
     ActionCreate:
       type: object
       additionalProperties: false
