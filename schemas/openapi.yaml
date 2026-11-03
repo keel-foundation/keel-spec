@@ -1,17 +1,21 @@
 openapi: 3.1.0
 info:
-  title: TubeKeel demo API
+  title: KeelTube demo API
   version: 0.1.0
   description: |
-    Draft contract for the local TubeKeel demo. Core runs on port 8080 and
+    Draft contract for the local KeelTube demo. Core runs on port 8080 and
     moderation runs on port 8082. The demo token is optional locally and
-    required when TUBEKEEL_DEMO_TOKEN is set.
+    required when KEELTUBE_DEMO_TOKEN is set.
+
+    Moderation v0.1 is frozen as of 2026-11-01. Additive changes only until
+    v0.2; see DECISIONS.md.
   license:
     name: CC-BY-4.0
     url: https://creativecommons.org/licenses/by/4.0/
 tags:
   - name: core
   - name: moderation
+  - name: internal
 paths:
   /health:
     get:
@@ -42,7 +46,28 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Channel"
+                $ref: "./channel.schema.json"
+  /api/v1/channels/{id}:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read a channel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Channel
+          content:
+            application/json:
+              schema:
+                $ref: "./channel.schema.json"
+        "404":
+          description: Channel not found
   /api/v1/videos/demo:
     servers:
       - url: http://localhost:8080
@@ -56,6 +81,27 @@ paths:
             application/json:
               schema:
                 $ref: "./video.schema.json"
+  /api/v1/videos/{id}:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read a video
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Video
+          content:
+            application/json:
+              schema:
+                $ref: "./video.schema.json"
+        "404":
+          description: Video not found
   /api/v1/demo:
     servers:
       - url: http://localhost:8080
@@ -74,7 +120,1708 @@ paths:
                   video:
                     $ref: "./video.schema.json"
                   channel:
-                    $ref: "#/components/schemas/Channel"
+                    $ref: "./channel.schema.json"
+  /api/v1/me:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Current principal
+      description: |
+        Session-authenticated principal. The dev bearer token remains available as a local
+        fallback when KEELTUBE_DEV_ACTOR_TOKEN is set.
+      security:
+        - sessionCookie: []
+        - devToken: []
+      responses:
+        "200":
+          description: Current principal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Principal"
+        "401":
+          description: A dev actor token is required
+  /api/v1/videos/{id}/view:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Start a playback session
+      security:
+        - {}
+        - sessionCookie: []
+        - devToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartViewRequest"
+      responses:
+        "200":
+          description: Playback session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StartViewResponse"
+        "404":
+          description: Video not found or not accessible
+        "410":
+          description: Video was removed
+  /api/v1/videos/{id}/view/progress:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Send a playback heartbeat
+      security:
+        - {}
+        - sessionCookie: []
+        - devToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ViewProgressRequest"
+      responses:
+        "200":
+          description: Updated playback session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViewProgressResponse"
+        "404":
+          description: Session or video not found
+  /api/v1/telemetry/events:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Record impression and click telemetry
+      security:
+        - {}
+        - sessionCookie: []
+        - devToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TelemetryBatch"
+      responses:
+        "200":
+          description: Telemetry result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelemetryResult"
+  /api/v1/studio/analytics/summary:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Creator analytics summary
+      security:
+        - sessionCookie: []
+        - devToken: []
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Creator analytics summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsSummaryResponse"
+  /api/v1/studio/analytics/timeseries:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Creator analytics daily time series
+      security:
+        - sessionCookie: []
+        - devToken: []
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Creator analytics points
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsTimeseriesResponse"
+  /api/v1/studio/videos/{id}/analytics:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Per-video creator analytics
+      security:
+        - sessionCookie: []
+        - devToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Per-video analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoAnalyticsResponse"
+        "404":
+          description: Video not found for this creator
+  /api/v1/feed:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Personalized or cold-start feed
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [latest, oldest, trending, views]
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [video, short]
+        - name: category
+          in: query
+          schema:
+            $ref: "#/components/schemas/VideoCategory"
+      responses:
+        "200":
+          description: Feed page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecommendedVideoPage"
+  /api/v1/explore:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Featured, new, trending, and curated collections
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 24
+            default: 8
+        - name: collection_limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+            default: 4
+      responses:
+        "200":
+          description: Explore payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExploreResponse"
+  /api/v1/videos:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List public videos
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [latest, oldest, trending, views]
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [video, short]
+        - name: category
+          in: query
+          schema:
+            $ref: "#/components/schemas/VideoCategory"
+        - name: channel_id
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Video page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoPage"
+  /api/v1/videos/{id}/related:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Related videos
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/VideoID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Related video page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoPage"
+        "404":
+          description: Video not found or not accessible
+        "410":
+          description: Video was removed
+  /api/v1/shorts:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List public shorts
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: channel_id
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Shorts page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoPage"
+  /api/v1/search:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Search public videos and channels
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [all, videos, shorts, channels]
+            default: all
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResponse"
+        "422":
+          description: Invalid query
+  /api/v1/categories:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Public category counts
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoriesResponse"
+  /api/v1/channels/{id}/videos:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List a channel's public videos
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [latest, oldest, trending, views]
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [video, short]
+        - name: category
+          in: query
+          schema:
+            $ref: "#/components/schemas/VideoCategory"
+      responses:
+        "200":
+          description: Channel video page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoPage"
+        "404":
+          description: Channel not found
+  /api/v1/auth/register:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Register an account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Verification required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResult"
+        "409":
+          description: Email already registered
+        "422":
+          description: Request validation failed
+        "429":
+          description: Rate limit exceeded
+  /api/v1/auth/verify-email:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Verify an email code and start a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyEmailRequest"
+      responses:
+        "200":
+          description: Active session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "400":
+          description: Invalid or expired code
+        "429":
+          description: Rate limit exceeded
+  /api/v1/auth/resend-verification:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Resend a verification code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailRequest"
+      responses:
+        "202":
+          description: Verification code sent when the account exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DevDeliveryResponse"
+        "429":
+          description: Rate limit exceeded
+  /api/v1/auth/login:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Sign in with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Active session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          description: Invalid credentials
+        "403":
+          description: Email not verified
+        "429":
+          description: Rate limit exceeded
+  /api/v1/auth/logout:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: End the current session
+      security:
+        - sessionCookie: []
+      responses:
+        "204":
+          description: Session ended
+  /api/v1/auth/session:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read the current session
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Active session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          description: No active session
+  /api/v1/auth/csrf:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Rotate the CSRF cookie for the current session
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: CSRF token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CsrfResponse"
+        "401":
+          description: No active session
+  /api/v1/auth/forgot-password:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Request a password reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailRequest"
+      responses:
+        "202":
+          description: Reset link sent when the account exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DevDeliveryResponse"
+        "429":
+          description: Rate limit exceeded
+  /api/v1/auth/reset-password:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Reset a password with a token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "204":
+          description: Password reset
+        "400":
+          description: Invalid or expired reset token
+        "429":
+          description: Rate limit exceeded
+  /api/v1/channels/{id}/subscription:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read subscription state
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ChannelID"
+      responses:
+        "200":
+          description: Subscription state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionResponse"
+        "401":
+          description: A session is required
+    post:
+      tags: [core]
+      summary: Subscribe to a channel
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ChannelID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Subscription state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionResponse"
+        "401":
+          description: A session is required
+        "403":
+          description: CSRF validation failed
+    delete:
+      tags: [core]
+      summary: Unsubscribe from a channel
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ChannelID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Subscription state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionResponse"
+        "401":
+          description: A session is required
+        "403":
+          description: CSRF validation failed
+  /api/v1/me/subscriptions:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List subscribed channels
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Subscribed channel page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelPage"
+        "401":
+          description: A session is required
+  /api/v1/me/feed:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Public videos from subscribed channels
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [latest, oldest, trending, views]
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [video, short]
+      responses:
+        "200":
+          description: Subscription feed page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoPage"
+        "401":
+          description: A session is required
+  /api/v1/me/library:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read saved, liked, or watch-history videos
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: tab
+          in: query
+          schema:
+            type: string
+            enum: [saved, liked, history]
+            default: saved
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Library page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoPage"
+        "401":
+          description: A session is required
+        "422":
+          description: Invalid tab
+  /api/v1/me/history:
+    servers:
+      - url: http://localhost:8080
+    delete:
+      tags: [core]
+      summary: Clear watch history
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "204":
+          description: History cleared
+        "401":
+          description: A session is required
+        "403":
+          description: CSRF validation failed
+  /api/v1/videos/{id}/reaction:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read the current reaction
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/VideoID"
+      responses:
+        "200":
+          description: Reaction state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReactionResponse"
+    put:
+      tags: [core]
+      summary: Set a like or dislike
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/VideoID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReactionRequest"
+      responses:
+        "200":
+          description: Reaction state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReactionResponse"
+        "422":
+          description: Invalid reaction kind
+    delete:
+      tags: [core]
+      summary: Clear the current reaction
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/VideoID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Reaction state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReactionResponse"
+  /api/v1/videos/{id}/save:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read the saved state
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/VideoID"
+      responses:
+        "200":
+          description: Save state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaveResponse"
+    put:
+      tags: [core]
+      summary: Save a video
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/VideoID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Save state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaveResponse"
+    delete:
+      tags: [core]
+      summary: Remove a saved video
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/VideoID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Save state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaveResponse"
+  /api/v1/videos/{id}/comments:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List visible comments and replies
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/VideoID"
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [top, newest]
+            default: top
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Comment page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentPage"
+        "404":
+          description: Video not found or not accessible
+        "410":
+          description: Video was removed
+    post:
+      tags: [core]
+      summary: Post a comment or one-level reply
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/VideoID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentCreateRequest"
+      responses:
+        "201":
+          description: Created comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+        "401":
+          description: A session is required
+        "422":
+          description: Invalid comment or reply depth
+  /api/v1/comments/{id}/like:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Like a comment
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/CommentID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Comment like state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentLikeResponse"
+    delete:
+      tags: [core]
+      summary: Remove a comment like
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/CommentID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Comment like state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentLikeResponse"
+  /api/v1/me/notifications:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List notifications for the current actor
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: unread
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Notification page with unread count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPage"
+        "401":
+          description: A session is required
+        "422":
+          description: Invalid unread filter
+  /api/v1/me/notifications/unread-count:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read the unread notification count
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnreadNotificationResponse"
+        "401":
+          description: A session is required
+  /api/v1/me/notifications/{id}/read:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Mark one notification read
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Updated notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+        "404":
+          description: Notification not found for this actor
+  /api/v1/me/notifications/read-all:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Mark all notifications read
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Mark-all result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarkAllNotificationsResponse"
+  /internal/v1/notifications:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [internal]
+      summary: Ingest a cross-service notification
+      description: |
+        Intended for trusted services such as moderation and finance. The route is only
+        registered when KEELTUBE_INTERNAL_TOKEN is set.
+      security:
+        - internalToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationIngestRequest"
+      responses:
+        "201":
+          description: Notification created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+        "200":
+          description: Existing notification returned for a duplicate dedupe_key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+        "401":
+          description: Internal token required
+        "422":
+          description: Unknown actor or channel ownership mismatch
+  /api/v1/studio/channel:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Current creator channel
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Creator channel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudioChannelResponse"
+        "403":
+          description: A creator channel is required
+  /api/v1/studio/videos:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List own videos, including drafts and processing
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: visibility
+          in: query
+          schema:
+            $ref: "#/components/schemas/VideoVisibility"
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [video, short]
+        - name: category
+          in: query
+          schema:
+            $ref: "#/components/schemas/VideoCategory"
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [latest, oldest, published, views]
+      responses:
+        "200":
+          description: Studio video page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudioVideoPage"
+    post:
+      tags: [core]
+      summary: Create a draft
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudioVideoRequest"
+      responses:
+        "201":
+          description: Created draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Video"
+        "422":
+          description: Invalid metadata
+  /api/v1/studio/videos/{id}:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read an own video with the edit aggregate
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/StudioVideoID"
+      responses:
+        "200":
+          description: Video, rights, subtitles, and versions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudioVideoDetail"
+        "404":
+          description: Video not found for this creator
+    patch:
+      tags: [core]
+      summary: Update own video metadata
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/StudioVideoID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudioVideoRequest"
+      responses:
+        "200":
+          description: Updated video
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Video"
+        "409":
+          description: The video changed since it was loaded
+        "422":
+          description: Invalid metadata
+  /api/v1/studio/videos/{id}/publish:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Publish a ready video
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/StudioVideoID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Published video
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Video"
+        "409":
+          description: The video is not ready to publish
+  /api/v1/studio/videos/{id}/unpublish:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Make a published video private
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/StudioVideoID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Unpublished video
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Video"
+  /api/v1/studio/videos/{id}/versions:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List immutable versions
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/StudioVideoID"
+      responses:
+        "200":
+          description: Versions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoVersionPage"
+    post:
+      tags: [core]
+      summary: Append an immutable version
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/StudioVideoID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VideoVersionRequest"
+      responses:
+        "201":
+          description: Created version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoVersion"
+        "422":
+          description: Invalid version
+  /api/v1/studio/videos/{id}/versions/{version_id}:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read one immutable version
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/StudioVideoID"
+        - name: version_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoVersion"
+        "404":
+          description: Version not found
+  /api/v1/studio/videos/{id}/thumbnail:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Create a presigned custom thumbnail upload
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/StudioVideoID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ThumbnailRequest"
+      responses:
+        "201":
+          description: Thumbnail upload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ThumbnailUpload"
+  /api/v1/studio/videos/{id}/thumbnail/complete:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Validate and attach a custom thumbnail
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/StudioVideoID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ThumbnailCompleteRequest"
+      responses:
+        "200":
+          description: Updated video
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Video"
+  /api/v1/studio/videos/{id}/subtitles:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List subtitle tracks
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/StudioVideoID"
+      responses:
+        "200":
+          description: Subtitle tracks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubtitleTrackPage"
+    post:
+      tags: [core]
+      summary: Create a presigned subtitle upload
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/StudioVideoID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubtitleRequest"
+      responses:
+        "201":
+          description: Subtitle upload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubtitleUpload"
+  /api/v1/studio/videos/{id}/subtitles/{track_id}/complete:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Finalize a subtitle track
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/StudioVideoID"
+        - name: track_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Ready track
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubtitleTrack"
+  /api/v1/studio/videos/{id}/subtitles/{track_id}:
+    servers:
+      - url: http://localhost:8080
+    delete:
+      tags: [core]
+      summary: Delete a subtitle track
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/StudioVideoID"
+        - name: track_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "204":
+          description: Track deleted
+  /api/v1/studio/stats:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Own-channel studio statistics
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Studio stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudioStats"
+  /api/v1/studio/uploads:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Create a multipart upload intent
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadCreateRequest"
+      responses:
+        "201":
+          description: Upload session with presigned part URLs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadSession"
+        "503":
+          description: Media storage is not configured
+        "422":
+          description: Upload validation failed
+  /api/v1/studio/uploads/{id}:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Poll upload, scan, and processing status
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/UploadID"
+      responses:
+        "200":
+          description: Upload and video state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudioUploadResponse"
+    delete:
+      tags: [core]
+      summary: Abort an in-progress upload
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/UploadID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "204":
+          description: Upload aborted
+  /api/v1/studio/uploads/{id}/scans:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read copyright and policy scan findings
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/UploadID"
+      responses:
+        "200":
+          description: Scan findings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaScanPage"
+  /api/v1/studio/uploads/{id}/parts:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Refresh presigned part URLs
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/UploadID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshPartsRequest"
+      responses:
+        "200":
+          description: Presigned parts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadPartsResponse"
+  /api/v1/studio/uploads/{id}/complete:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Complete a multipart upload and enqueue scanning
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/UploadID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteUploadRequest"
+      responses:
+        "200":
+          description: Completed upload and video state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudioUploadResponse"
+  /api/v1/media/{id}/video.mp4:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Redirect to private MP4 playback
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/MediaVideoID"
+      responses:
+        "302":
+          description: Presigned storage redirect
+        "404":
+          description: Media not found or not accessible
+        "410":
+          description: Video was removed
+  /api/v1/media/{id}/thumbnail.jpg:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Redirect to the private thumbnail
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/MediaVideoID"
+      responses:
+        "302":
+          description: Presigned storage redirect
+        "404":
+          description: Media not found
+  /api/v1/media/{id}/captions.vtt:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Redirect to embedded captions
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/MediaVideoID"
+      responses:
+        "302":
+          description: Presigned storage redirect
+        "404":
+          description: Captions not found
+  /api/v1/media/{id}/subtitles/{track_id}:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Redirect to a ready subtitle track
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/MediaVideoID"
+        - name: track_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Presigned storage redirect
+        "404":
+          description: Track not found or not ready
+  /api/v1/media/{id}/hls/master.m3u8:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Stream the HLS master manifest
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/MediaVideoID"
+      responses:
+        "200":
+          description: HLS master manifest
+          content:
+            application/vnd.apple.mpegurl:
+              schema:
+                type: string
+        "404":
+          description: HLS not found
+  /api/v1/media/{id}/hls/{rendition}/index.m3u8:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Stream an HLS variant manifest
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/MediaVideoID"
+        - name: rendition
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[0-9]{3,4}p$"
+      responses:
+        "200":
+          description: HLS variant manifest
+          content:
+            application/vnd.apple.mpegurl:
+              schema:
+                type: string
+        "404":
+          description: Variant not found
+  /api/v1/media/{id}/hls/{rendition}/{segment}:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Redirect to an HLS segment
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/MediaVideoID"
+        - name: rendition
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[0-9]{3,4}p$"
+        - name: segment
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[A-Za-z0-9._-]+\\.ts$"
+      responses:
+        "302":
+          description: Presigned storage redirect
+        "404":
+          description: Segment not found
   /v1/policies:
     servers:
       - url: http://localhost:8082
@@ -125,6 +1872,10 @@ paths:
                 $ref: "#/components/schemas/DemoState"
         "401":
           description: Demo token required
+        "403":
+          description: A moderator role is required
+        "429":
+          description: Rate limit exceeded
   /v1/actions:
     servers:
       - url: http://localhost:8082
@@ -149,8 +1900,14 @@ paths:
                 $ref: "./enforcement-action.schema.json"
         "401":
           description: Demo token required
+        "403":
+          description: A moderator role is required
         "409":
           description: An active action already exists
+        "422":
+          description: Request validation failed
+        "429":
+          description: Rate limit exceeded
   /v1/actions/{action_id}/appeal:
     servers:
       - url: http://localhost:8082
@@ -179,8 +1936,16 @@ paths:
             application/json:
               schema:
                 $ref: "./appeal.schema.json"
+        "401":
+          description: Demo token required
+        "403":
+          description: A creator role is required
         "409":
           description: Appeal window closed or appeal not allowed
+        "422":
+          description: Request validation failed
+        "429":
+          description: Rate limit exceeded
   /v1/appeals/{appeal_id}/decide:
     servers:
       - url: http://localhost:8082
@@ -209,6 +1974,385 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DemoState"
+        "401":
+          description: Demo token required
+        "403":
+          description: An appeals role is required, or the reviewer is not independent
+        "404":
+          description: Appeal not found
+        "409":
+          description: Appeal already decided
+        "422":
+          description: Request validation failed
+        "429":
+          description: Rate limit exceeded
+  /v1/whoami:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Resolve the current principal
+      security:
+        - {}
+        - demoToken: []
+      responses:
+        "200":
+          description: Current principal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhoAmI"
+        "401":
+          description: A role or demo token is required
+  /v1/appeals:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: List appeals
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, decided]
+      responses:
+        "200":
+          description: Appeals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppealList"
+        "403":
+          description: A moderator or appeals role is required
+  /v1/appeals/{appeal_id}:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Read an appeal
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - name: appeal_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Appeal
+          content:
+            application/json:
+              schema:
+                $ref: "./appeal.schema.json"
+        "403":
+          description: A moderator or appeals role is required
+        "404":
+          description: Appeal not found
+  /v1/creator/summary:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Creator-scoped transparency counts
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+      responses:
+        "200":
+          description: Creator summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatorSummary"
+        "401":
+          description: A creator role is required
+        "403":
+          description: A creator role is required
+  /v1/creator/cases:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: List creator-scoped cases
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, reviewing, decided, appealed, closed]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Creator cases
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatorCaseList"
+        "403":
+          description: A creator role is required
+  /v1/creator/cases/{case_id}:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Read one creator case
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+        - name: case_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Creator case
+          content:
+            application/json:
+              schema:
+                $ref: "./moderation-case.schema.json"
+        "403":
+          description: A creator role is required
+        "404":
+          description: Case not found for this creator
+  /v1/creator/actions:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: List creator-scoped enforcement actions
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, reversed, expired]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Creator actions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatorActionList"
+        "403":
+          description: A creator role is required
+  /v1/creator/actions/{action_id}:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Read one creator action
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+        - name: action_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Creator action
+          content:
+            application/json:
+              schema:
+                $ref: "./enforcement-action.schema.json"
+        "403":
+          description: A creator role is required
+        "404":
+          description: Action not found for this creator
+  /v1/creator/appeals:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: List creator-scoped appeals
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, decided]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Creator appeals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatorAppealList"
+        "403":
+          description: A creator role is required
+  /v1/creator/appeals/{appeal_id}:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Read one creator appeal
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+        - name: appeal_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Creator appeal
+          content:
+            application/json:
+              schema:
+                $ref: "./appeal.schema.json"
+        "403":
+          description: A creator role is required
+        "404":
+          description: Appeal not found for this creator
+  /v1/creator/ledger:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Read creator-scoped audit records
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Creator ledger and full-chain verification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatorLedger"
+        "403":
+          description: A creator role is required
+  /v1/creator/ledger/verify:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Verify the complete hash chain
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+      responses:
+        "200":
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Verification"
+        "403":
+          description: A creator role is required
+  /v1/creator/ledger/export:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Export creator-scoped audit records
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [jsonl, csv]
+            default: jsonl
+      responses:
+        "200":
+          description: Creator ledger file
+          content:
+            application/x-ndjson:
+              schema:
+                type: string
+            text/csv:
+              schema:
+                type: string
+        "403":
+          description: A creator role is required
   /v1/ledger:
     servers:
       - url: http://localhost:8082
@@ -271,19 +2415,1155 @@ components:
     demoToken:
       type: http
       scheme: bearer
+    devToken:
+      type: http
+      scheme: bearer
+      description: Dev-only actor token for core; set KEELTUBE_DEV_ACTOR_TOKEN.
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: keeltube_session
+      description: HttpOnly browser session cookie issued by core.
+    internalToken:
+      type: http
+      scheme: bearer
+      description: Service-to-service token; set KEELTUBE_INTERNAL_TOKEN on core.
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
+    Offset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 10000
+        default: 0
+    VideoID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    ChannelID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    CommentID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    StudioVideoID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    UploadID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    MediaVideoID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    CSRFHeader:
+      name: X-CSRF-Token
+      in: header
+      required: false
+      description: Required when the request authenticates with the session cookie.
+      schema:
+        type: string
+    CreatorChannel:
+      name: channel_id
+      in: query
+      required: false
+      description: Required when the authenticated creator principal has multiple channel claims.
+      schema:
+        type: string
+        pattern: "^ch_[a-zA-Z0-9_]+$"
+        maxLength: 80
   schemas:
-    Channel:
+    Error:
       type: object
-      additionalProperties: false
-      required: [id, name, handle]
+      required: [detail]
+      properties:
+        detail:
+          type: string
+        field:
+          type: string
+    VideoCategory:
+      type: string
+      enum: [Documentaries, Protocol, Moderation, Studio, Federation]
+    VideoVisibility:
+      type: string
+      enum: [public, unlisted, private]
+    VideoPage:
+      type: object
+      required: [items, limit, offset, total, has_more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "./video.schema.json"
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+    Reason:
+      type: object
+      required: [code, label]
+      properties:
+        code:
+          type: string
+          enum:
+            - subscription
+            - category
+            - because_you_watched
+            - because_you_liked
+            - because_you_saved
+            - recently_watched
+            - trending
+            - new
+            - recommended
+        label:
+          type: string
+        source_video_id:
+          type: string
+        source_title:
+          type: string
+        category:
+          type: string
+        channel_id:
+          type: string
+    RecommendedVideo:
+      allOf:
+        - $ref: "./video.schema.json"
+        - type: object
+          properties:
+            reason:
+              $ref: "#/components/schemas/Reason"
+            score:
+              type: number
+    RecommendedVideoPage:
+      type: object
+      required: [items, limit, offset, total, has_more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecommendedVideo"
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+    ChannelPage:
+      type: object
+      required: [items, limit, offset, total, has_more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "./channel.schema.json"
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+    ExploreCollection:
+      type: object
+      required: [id, title, description, videos]
       properties:
         id:
           type: string
-          pattern: "^ch_[a-zA-Z0-9_]+$"
+        title:
+          type: string
+        description:
+          type: string
+        reason:
+          $ref: "#/components/schemas/Reason"
+        videos:
+          $ref: "#/components/schemas/RecommendedVideoPage"
+    ExploreResponse:
+      type: object
+      required: [featured, new, trending, collections]
+      properties:
+        featured:
+          oneOf:
+            - $ref: "#/components/schemas/RecommendedVideo"
+            - type: "null"
+        new:
+          $ref: "#/components/schemas/RecommendedVideoPage"
+        trending:
+          $ref: "#/components/schemas/RecommendedVideoPage"
+        collections:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExploreCollection"
+    SearchResponse:
+      type: object
+      required: [videos, channels]
+      properties:
+        videos:
+          $ref: "#/components/schemas/VideoPage"
+        channels:
+          $ref: "#/components/schemas/ChannelPage"
+    Category:
+      type: object
+      required: [name, video_count]
+      properties:
+        name:
+          $ref: "#/components/schemas/VideoCategory"
+        video_count:
+          type: integer
+    CategoriesResponse:
+      type: object
+      required: [categories]
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/Category"
+    Comment:
+      type: object
+      required: [id, video_id, actor_id, author, handle, body, likes, pinned, status, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        video_id:
+          type: string
+        parent_id:
+          type: string
+        actor_id:
+          type: string
+        author:
+          type: string
+        handle:
+          type: string
+        avatar_url:
+          type: string
+          format: uri
+        body:
+          type: string
+        likes:
+          type: integer
+        pinned:
+          type: boolean
+        status:
+          type: string
+          enum: [visible, hidden, removed]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    CommentPage:
+      type: object
+      required: [items, limit, offset, total, has_more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Comment"
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+    CommentCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [body]
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        parent_id:
+          type: string
+    CommentLikeResponse:
+      type: object
+      required: [comment_id, liked, likes]
+      properties:
+        comment_id:
+          type: string
+        liked:
+          type: boolean
+        likes:
+          type: integer
+    SubscriptionResponse:
+      type: object
+      required: [channel_id, subscribed, subscribers]
+      properties:
+        channel_id:
+          type: string
+        subscribed:
+          type: boolean
+        subscribers:
+          type: integer
+    ReactionRequest:
+      type: object
+      additionalProperties: false
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [like, dislike]
+    ReactionResponse:
+      type: object
+      required: [video_id, kind, likes]
+      properties:
+        video_id:
+          type: string
+        kind:
+          oneOf:
+            - type: string
+              enum: [like, dislike]
+            - type: "null"
+        likes:
+          type: integer
+    SaveResponse:
+      type: object
+      required: [video_id, saved]
+      properties:
+        video_id:
+          type: string
+        saved:
+          type: boolean
+    Notification:
+      type: object
+      required: [id, kind, title, body, href, read, created_at]
+      properties:
+        id:
+          type: string
+        channel_id:
+          type: string
+        kind:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        href:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+        read:
+          type: boolean
+        read_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    NotificationPage:
+      type: object
+      required: [items, limit, offset, total, has_more, unread_count]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notification"
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+        unread_count:
+          type: integer
+    UnreadNotificationResponse:
+      type: object
+      required: [unread_count]
+      properties:
+        unread_count:
+          type: integer
+    MarkAllNotificationsResponse:
+      type: object
+      required: [updated, unread_count]
+      properties:
+        updated:
+          type: integer
+        unread_count:
+          type: integer
+    NotificationIngestRequest:
+      type: object
+      additionalProperties: false
+      required: [actor_id, kind, title]
+      properties:
+        actor_id:
+          type: string
+        channel_id:
+          type: string
+        kind:
+          type: string
+          maxLength: 64
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        body:
+          type: string
+          maxLength: 1000
+        href:
+          type: string
+          maxLength: 500
+        payload:
+          type: object
+          additionalProperties: true
+        dedupe_key:
+          type: string
+          maxLength: 200
+        created_at:
+          type: string
+          format: date-time
+    User:
+      type: object
+      required: [id, account_id, name, handle, role, channel_id, email, email_verified]
+      properties:
+        id:
+          type: string
+        account_id:
+          type: string
         name:
           type: string
         handle:
           type: string
+        role:
+          type: string
+        channel_id:
+          type: string
+        avatar_url:
+          type: string
+        email:
+          type: string
+          format: email
+        email_verified:
+          type: boolean
+    SessionResponse:
+      type: object
+      required: [user, provider, signed_in_at, expires_at]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        provider:
+          type: string
+        signed_in_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+    RegisterResult:
+      type: object
+      required: [user, email, verification_required, verification_expires_at]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        email:
+          type: string
+          format: email
+        verification_required:
+          type: boolean
+        verification_expires_at:
+          type: string
+          format: date-time
+        dev_code:
+          type: string
+    VerifyEmailRequest:
+      type: object
+      additionalProperties: false
+      required: [email, code]
+      properties:
+        email:
+          type: string
+          format: email
+        code:
+          type: string
+          pattern: "^[0-9]{6}$"
+    EmailRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    ResetPasswordRequest:
+      type: object
+      additionalProperties: false
+      required: [token, password]
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          minLength: 8
+    CsrfResponse:
+      type: object
+      required: [csrf_token]
+      properties:
+        csrf_token:
+          type: string
+    DevDeliveryResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
+        dev_code:
+          type: string
+        dev_token:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+    StudioChannelResponse:
+      type: object
+      required: [channel]
+      properties:
+        channel:
+          $ref: "./channel.schema.json"
+    StudioVideoPage:
+      type: object
+      required: [items, limit, offset, total, has_more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "./video.schema.json"
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+    StudioVideoRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 5000
+        visibility:
+          $ref: "#/components/schemas/VideoVisibility"
+        category:
+          $ref: "#/components/schemas/VideoCategory"
+        license:
+          type: string
+          enum: [standard, cc-by, cc-by-sa, cc0, all-rights-reserved]
+        format:
+          type: string
+          enum: [video, short]
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 50
+        expected_updated_at:
+          type: string
+          format: date-time
+    VideoRights:
+      type: object
+      properties:
+        declaration:
+          type: string
+          enum: [original, licensed, public_domain, fair_use]
+        holder:
+          type: string
+        notes:
+          type: string
+    VideoTrim:
+      type: object
+      required: [start, end]
+      properties:
+        start:
+          type: number
+          minimum: 0
+        end:
+          type: number
+          minimum: 0
+    VideoCut:
+      type: object
+      required: [start, end]
+      properties:
+        start:
+          type: number
+          minimum: 0
+        end:
+          type: number
+          minimum: 0
+    VideoAudioTrack:
+      type: object
+      required: [name, url, volume]
+      properties:
+        name:
+          type: string
+        url:
+          type: string
+          format: uri
+        volume:
+          type: number
+          minimum: 0
+          maximum: 2
+    VideoVersion:
+      type: object
+      required: [id, video_id, channel_id, label, trim, cuts, volume, created_by, created_at]
+      properties:
+        id:
+          type: string
+        video_id:
+          type: string
+        channel_id:
+          type: string
+        label:
+          type: string
+        trim:
+          $ref: "#/components/schemas/VideoTrim"
+        cuts:
+          type: array
+          items:
+            $ref: "#/components/schemas/VideoCut"
+        audio:
+          $ref: "#/components/schemas/VideoAudioTrack"
+        volume:
+          type: number
+          minimum: 0
+          maximum: 2
+        created_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    VideoVersionPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/VideoVersion"
+    VideoVersionRequest:
+      type: object
+      additionalProperties: false
+      required: [label, trim]
+      properties:
+        label:
+          type: string
+          maxLength: 100
+        trim:
+          $ref: "#/components/schemas/VideoTrim"
+        cuts:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/VideoCut"
+        audio:
+          $ref: "#/components/schemas/VideoAudioTrack"
+        volume:
+          type: number
+          minimum: 0
+          maximum: 2
+    StudioVideoDetail:
+      allOf:
+        - $ref: "./video.schema.json"
+        - type: object
+          required: [subtitles, versions]
+          properties:
+            rights:
+              $ref: "#/components/schemas/VideoRights"
+            subtitles:
+              type: array
+              items:
+                $ref: "#/components/schemas/SubtitleTrack"
+            versions:
+              type: array
+              items:
+                $ref: "#/components/schemas/VideoVersion"
+    ThumbnailRequest:
+      type: object
+      additionalProperties: false
+      required: [filename, content_type, size_bytes]
+      properties:
+        filename:
+          type: string
+        content_type:
+          type: string
+        size_bytes:
+          type: integer
+          minimum: 1
+    ThumbnailUpload:
+      type: object
+      required: [object_key, upload_url, expires_at]
+      properties:
+        object_key:
+          type: string
+        upload_url:
+          type: string
+          format: uri
+        expires_at:
+          type: string
+          format: date-time
+    ThumbnailCompleteRequest:
+      type: object
+      additionalProperties: false
+      required: [object_key]
+      properties:
+        object_key:
+          type: string
+    SubtitleRequest:
+      type: object
+      additionalProperties: false
+      required: [language, label, kind, filename, content_type, size_bytes]
+      properties:
+        language:
+          type: string
+        label:
+          type: string
+          maxLength: 100
+        kind:
+          type: string
+          enum: [subtitles, captions]
+        filename:
+          type: string
+        content_type:
+          type: string
+        size_bytes:
+          type: integer
+          minimum: 1
+    SubtitleTrack:
+      type: object
+      required: [id, video_id, channel_id, language, label, kind, object_key, status, auto, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        video_id:
+          type: string
+        channel_id:
+          type: string
+        language:
+          type: string
+        label:
+          type: string
+        kind:
+          type: string
+          enum: [subtitles, captions]
+        object_key:
+          type: string
+        status:
+          type: string
+          enum: [pending, ready, failed]
+        auto:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    SubtitleTrackPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubtitleTrack"
+    SubtitleUpload:
+      type: object
+      required: [track, upload_url, expires_at]
+      properties:
+        track:
+          $ref: "#/components/schemas/SubtitleTrack"
+        upload_url:
+          type: string
+          format: uri
+        expires_at:
+          type: string
+          format: date-time
+    StudioStats:
+      type: object
+      required:
+        - video_count
+        - published_count
+        - processing_count
+        - blocked_uploads
+        - views
+        - likes
+        - comments
+        - subscribers
+        - analytics_views
+        - analytics_sessions
+        - watch_seconds
+        - watch_hours
+        - completions
+        - completion_rate
+        - impressions
+        - clicks
+        - click_through_rate
+        - recent
+      properties:
+        video_count:
+          type: integer
+        published_count:
+          type: integer
+        processing_count:
+          type: integer
+        blocked_uploads:
+          type: integer
+        views:
+          type: integer
+        likes:
+          type: integer
+        comments:
+          type: integer
+        subscribers:
+          type: integer
+        analytics_views:
+          type: integer
+        analytics_sessions:
+          type: integer
+        watch_seconds:
+          type: number
+        watch_hours:
+          type: number
+        completions:
+          type: integer
+        completion_rate:
+          type: number
+        impressions:
+          type: integer
+        clicks:
+          type: integer
+        click_through_rate:
+          type: number
+        recent:
+          type: array
+          items:
+            $ref: "./video.schema.json"
+    RightsRequest:
+      type: object
+      required: [declaration]
+      properties:
+        declaration:
+          type: string
+          enum: [original, licensed, public_domain, fair_use]
+        holder:
+          type: string
+        notes:
+          type: string
+    UploadCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [title, filename, content_type, size_bytes]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        visibility:
+          $ref: "#/components/schemas/VideoVisibility"
+        category:
+          $ref: "#/components/schemas/VideoCategory"
+        license:
+          type: string
+          enum: [standard, cc-by, cc-by-sa, cc0, all-rights-reserved]
+        format:
+          type: string
+          enum: [video, short]
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+        filename:
+          type: string
+        content_type:
+          type: string
+        size_bytes:
+          type: integer
+          minimum: 1
+        content_sha256:
+          type: string
+        rights:
+          $ref: "#/components/schemas/RightsRequest"
+    PresignedPart:
+      type: object
+      required: [part_number, url]
+      properties:
+        part_number:
+          type: integer
+        url:
+          type: string
+          format: uri
+    UploadSession:
+      type: object
+      required:
+        - upload_id
+        - video_id
+        - video
+        - bucket
+        - key
+        - s3_upload_id
+        - part_size
+        - parts
+        - parts_expires_at
+        - expires_at
+      properties:
+        upload_id:
+          type: string
+        video_id:
+          type: string
+        video:
+          $ref: "./video.schema.json"
+        bucket:
+          type: string
+        key:
+          type: string
+        s3_upload_id:
+          type: string
+        part_size:
+          type: integer
+        parts:
+          type: array
+          items:
+            $ref: "#/components/schemas/PresignedPart"
+        parts_expires_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+    UploadIntent:
+      type: object
+      required:
+        - id
+        - video_id
+        - channel_id
+        - actor_id
+        - object_key
+        - filename
+        - content_type
+        - size_bytes
+        - part_size
+        - status
+        - expires_at
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        video_id:
+          type: string
+        channel_id:
+          type: string
+        actor_id:
+          type: string
+        s3_upload_id:
+          type: string
+        bucket:
+          type: string
+        object_key:
+          type: string
+        filename:
+          type: string
+        content_type:
+          type: string
+        size_bytes:
+          type: integer
+        part_size:
+          type: integer
+        content_sha256:
+          type: string
+        status:
+          type: string
+        error:
+          type: string
+        scan_verdict:
+          type: string
+        scan_reason:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    StudioUploadResponse:
+      type: object
+      required: [upload, video]
+      properties:
+        upload:
+          $ref: "#/components/schemas/UploadIntent"
+        video:
+          $ref: "./video.schema.json"
+    Finding:
+      type: object
+      required: [code, message, severity, kind]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+        kind:
+          type: string
+    MediaScan:
+      type: object
+      required: [id, upload_id, video_id, scanner, verdict, findings, size_bytes, created_at]
+      properties:
+        id:
+          type: string
+        upload_id:
+          type: string
+        video_id:
+          type: string
+        scanner:
+          type: string
+        verdict:
+          type: string
+        findings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Finding"
+        content_sha256:
+          type: string
+        size_bytes:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+    MediaScanPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MediaScan"
+    RefreshPartsRequest:
+      type: object
+      additionalProperties: false
+      required: [part_numbers]
+      properties:
+        part_numbers:
+          type: array
+          items:
+            type: integer
+    UploadPartsResponse:
+      type: object
+      required: [parts, expires_at]
+      properties:
+        parts:
+          type: array
+          items:
+            $ref: "#/components/schemas/PresignedPart"
+        expires_at:
+          type: string
+          format: date-time
+    CompletedPart:
+      type: object
+      required: [part_number, etag]
+      properties:
+        part_number:
+          type: integer
+        etag:
+          type: string
+    CompleteUploadRequest:
+      type: object
+      additionalProperties: false
+      required: [parts]
+      properties:
+        parts:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/CompletedPart"
+        content_sha256:
+          type: string
+    Video:
+      $ref: "./video.schema.json"
+    Channel:
+      $ref: "./channel.schema.json"
+    Principal:
+      type: object
+      additionalProperties: false
+      required: [id, role]
+      properties:
+        id:
+          type: string
+          minLength: 1
+        role:
+          type: string
+          minLength: 1
     Verification:
       type: object
       required: [valid, records, head, first_broken, reason]
@@ -298,6 +3578,26 @@ components:
           type: [integer, "null"]
         reason:
           type: [string, "null"]
+    WhoAmI:
+      type: object
+      additionalProperties: false
+      required: [id, role]
+      properties:
+        id:
+          type: string
+          minLength: 1
+        role:
+          type: string
+          enum: [creator, moderator, appeals, operator]
+    AppealList:
+      type: object
+      additionalProperties: false
+      required: [appeals]
+      properties:
+        appeals:
+          type: array
+          items:
+            $ref: "./appeal.schema.json"
     DemoState:
       type: object
       required: [action, appeal, appeals, case, ledger, policy, verification]
@@ -326,6 +3626,352 @@ components:
           type: object
         verification:
           $ref: "#/components/schemas/Verification"
+    CreatorSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - channel_id
+        - cases_total
+        - open_cases
+        - actions_total
+        - active_actions
+        - appeals_total
+        - pending_appeals
+        - decided_appeals
+        - ledger_records
+      properties:
+        channel_id:
+          type: string
+        cases_total:
+          type: integer
+        open_cases:
+          type: integer
+        actions_total:
+          type: integer
+        active_actions:
+          type: integer
+        appeals_total:
+          type: integer
+        pending_appeals:
+          type: integer
+        decided_appeals:
+          type: integer
+        ledger_records:
+          type: integer
+    CreatorCaseList:
+      type: object
+      additionalProperties: false
+      required: [cases, total, limit, offset, channel_id]
+      properties:
+        cases:
+          type: array
+          items:
+            $ref: "./moderation-case.schema.json"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        channel_id:
+          type: string
+    CreatorActionList:
+      type: object
+      additionalProperties: false
+      required: [actions, total, limit, offset, channel_id]
+      properties:
+        actions:
+          type: array
+          items:
+            $ref: "./enforcement-action.schema.json"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        channel_id:
+          type: string
+    CreatorAppealList:
+      type: object
+      additionalProperties: false
+      required: [appeals, total, limit, offset, channel_id]
+      properties:
+        appeals:
+          type: array
+          items:
+            $ref: "./appeal.schema.json"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        channel_id:
+          type: string
+    CreatorLedger:
+      type: object
+      additionalProperties: false
+      required: [ledger, verification, total, limit, offset, channel_id]
+      properties:
+        ledger:
+          type: array
+          items:
+            $ref: "./audit-record.schema.json"
+        verification:
+          $ref: "#/components/schemas/Verification"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        channel_id:
+          type: string
+    TrafficSource:
+      type: string
+      enum: [feed, explore, search, channel, watch, shorts, external, unknown]
+    StartViewRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        source:
+          $ref: "#/components/schemas/TrafficSource"
+    StartViewResponse:
+      type: object
+      additionalProperties: false
+      required: [video_id, views, session_id, counted, watched_seconds, completed]
+      properties:
+        video_id:
+          type: string
+        views:
+          type: integer
+        session_id:
+          type: string
+        counted:
+          type: boolean
+        watched_seconds:
+          type: number
+        completed:
+          type: boolean
+    ViewProgressRequest:
+      type: object
+      additionalProperties: false
+      required: [session_id, event_id, position_seconds]
+      properties:
+        session_id:
+          type: string
+        event_id:
+          type: string
+          maxLength: 128
+        position_seconds:
+          type: number
+          minimum: 0
+        completed:
+          type: boolean
+          default: false
+    ViewProgressResponse:
+      type: object
+      additionalProperties: false
+      required: [video_id, session_id, views, watched_seconds, watched_delta_seconds, completed]
+      properties:
+        video_id:
+          type: string
+        session_id:
+          type: string
+        views:
+          type: integer
+        watched_seconds:
+          type: number
+        watched_delta_seconds:
+          type: number
+        completed:
+          type: boolean
+    TelemetryEvent:
+      type: object
+      additionalProperties: false
+      required: [event_id, video_id, event_type, source]
+      properties:
+        event_id:
+          type: string
+          maxLength: 128
+        video_id:
+          type: string
+        event_type:
+          type: string
+          enum: [impression, click]
+        source:
+          $ref: "#/components/schemas/TrafficSource"
+        position:
+          type: integer
+          minimum: 0
+          maximum: 10000
+          default: 0
+    TelemetryBatch:
+      type: object
+      additionalProperties: false
+      required: [events]
+      properties:
+        events:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/TelemetryEvent"
+    TelemetryResult:
+      type: object
+      additionalProperties: false
+      required: [accepted, duplicates, rejected]
+      properties:
+        accepted:
+          type: integer
+        duplicates:
+          type: integer
+        rejected:
+          type: integer
+    AnalyticsSource:
+      type: object
+      additionalProperties: false
+      required: [source, views, sessions, watch_seconds, watch_hours, completions, impressions, clicks]
+      properties:
+        source:
+          $ref: "#/components/schemas/TrafficSource"
+        views:
+          type: integer
+        sessions:
+          type: integer
+        watch_seconds:
+          type: number
+        watch_hours:
+          type: number
+        completions:
+          type: integer
+        impressions:
+          type: integer
+        clicks:
+          type: integer
+    AnalyticsSummary:
+      type: object
+      additionalProperties: false
+      required: [views, sessions, watch_seconds, watch_hours, completions, completion_rate, impressions, clicks, click_through_rate, sources]
+      properties:
+        views:
+          type: integer
+        sessions:
+          type: integer
+        watch_seconds:
+          type: number
+        watch_hours:
+          type: number
+        completions:
+          type: integer
+        completion_rate:
+          type: number
+        impressions:
+          type: integer
+        clicks:
+          type: integer
+        click_through_rate:
+          type: number
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsSource"
+    AnalyticsPoint:
+      type: object
+      additionalProperties: false
+      required: [day, views, sessions, watch_seconds, watch_hours, completions, impressions, clicks]
+      properties:
+        day:
+          type: string
+          format: date
+        views:
+          type: integer
+        sessions:
+          type: integer
+        watch_seconds:
+          type: number
+        watch_hours:
+          type: number
+        completions:
+          type: integer
+        impressions:
+          type: integer
+        clicks:
+          type: integer
+    AnalyticsSummaryResponse:
+      type: object
+      additionalProperties: false
+      required: [channel_id, from, to, views, sessions, watch_seconds, watch_hours, completions, completion_rate, impressions, clicks, click_through_rate, sources]
+      properties:
+        channel_id:
+          type: string
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        views:
+          type: integer
+        sessions:
+          type: integer
+        watch_seconds:
+          type: number
+        watch_hours:
+          type: number
+        completions:
+          type: integer
+        completion_rate:
+          type: number
+        impressions:
+          type: integer
+        clicks:
+          type: integer
+        click_through_rate:
+          type: number
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsSource"
+    AnalyticsTimeseriesResponse:
+      type: object
+      additionalProperties: false
+      required: [channel_id, from, to, points]
+      properties:
+        channel_id:
+          type: string
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsPoint"
+    VideoAnalyticsResponse:
+      type: object
+      additionalProperties: false
+      required: [channel_id, video_id, from, to, summary, points]
+      properties:
+        channel_id:
+          type: string
+        video_id:
+          type: string
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        summary:
+          $ref: "#/components/schemas/AnalyticsSummary"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsPoint"
     ActionCreate:
       type: object
       additionalProperties: false
@@ -334,15 +3980,24 @@ components:
         video_id:
           type: string
           pattern: "^vid_[a-zA-Z0-9_]+$"
+          maxLength: 80
+        channel_id:
+          type: string
+          pattern: "^ch_[a-zA-Z0-9_]+$"
+          maxLength: 80
+          default: ch_demo
         policy_clause:
           type: string
           minLength: 1
+          maxLength: 128
         reason:
           type: string
           minLength: 1
+          maxLength: 2000
         evidence:
           type: array
           minItems: 1
+          maxItems: 50
           items:
             type: string
     AppealCreate:
@@ -361,6 +4016,7 @@ components:
         statement:
           type: string
           minLength: 1
+          maxLength: 4000
     AppealDecision:
       type: object
       additionalProperties: false
@@ -372,3 +4028,4 @@ components:
         reasoning:
           type: string
           minLength: 1
+          maxLength: 4000

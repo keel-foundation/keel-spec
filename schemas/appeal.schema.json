@@ -62,7 +62,8 @@
       "enum": ["reverse", "uphold", null]
     },
     "reasoning": {
-      "type": ["string", "null"]
+      "type": ["string", "null"],
+      "maxLength": 4000
     },
     "decided_at": {
       "type": ["string", "null"],

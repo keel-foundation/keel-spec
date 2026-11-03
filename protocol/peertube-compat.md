@@ -14,12 +14,12 @@ This document records the exact PeerTube version, endpoints, object shapes, and 
 | Comments | TBD | TODO | |
 | Import video metadata | TBD | TODO | |
 | Import captions/thumbnails | TBD | TODO | |
-| Moderation labels | N/A | Extension | `tubekeel:trustLabels` |
+| Moderation labels | N/A | Extension | `keeltube:trustLabels` |
 
 ## Compatibility rules
 
-1. Unknown `tubekeel:*` properties must be ignored by PeerTube parsers.
-2. A TubeKeel instance must not require PeerTube to understand payouts or appeals.
+1. Unknown `keeltube:*` properties must be ignored by PeerTube parsers.
+2. A KeelTube instance must not require PeerTube to understand payouts or appeals.
 3. Attribution and license metadata must survive federation.
 4. A failed compatibility test is a release blocker for a "PeerTube-compatible" claim.
 

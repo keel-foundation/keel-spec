@@ -1,6 +1,6 @@
-# TubeKeel Specification
+# KeelTube Specification
 
-This repository contains the normative protocol specification, RFCs, schemas, and policy language for TubeKeel.
+This repository contains the normative protocol specification, RFCs, schemas, and policy language for KeelTube.
 
 ## Contents
 
@@ -8,13 +8,27 @@ This repository contains the normative protocol specification, RFCs, schemas, an
 - `protocol/` — normative protocol documents once ratified.
 - `schemas/` — JSON Schemas, examples, the demo OpenAPI document, and schema validation.
 
+## Status
+
+- Schemas exist for actors, channels, playback manifests, videos, signals, moderation cases,
+  enforcement actions, appeals, and audit records, with examples and CI validation.
+- Moderation v0.1 is frozen as of 2026-11-01. Additive changes only until v0.2.
+- Core is PostgreSQL-backed and implements catalog and discovery, identity, engagement, creator
+  studio upload/transcoding/HLS, watch telemetry and creator analytics, and creator notifications.
+  The web client is fully built against local preview data, including the feed, watch page,
+  channels, search, library, creator studio, and creator moderation record; API adapters are next.
+  Federation, payouts, and the production staff moderation portal are not implemented.
+
 ## Checks
 
 ```sh
 python3 -m venv .venv
-.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/pip install -r requirements-dev.lock
 .venv/bin/python scripts/validate_schemas.py
 ```
+
+`requirements-dev.lock` pins the full development dependency set. `requirements-dev.txt` lists
+the direct dependencies; regenerate the lock after changing it.
 
 ## Licensing
 

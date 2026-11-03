@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:keel:schema:channel:0.1",
+  "title": "Channel",
+  "description": "A creator channel owned by an actor.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "actor_id", "handle", "name", "created_at", "updated_at"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^ch_[a-zA-Z0-9_]+$",
+      "description": "Stable, opaque channel identifier."
+    },
+    "actor_id": {
+      "type": "string",
+      "pattern": "^usr_[a-zA-Z0-9_]+$"
+    },
+    "handle": {
+      "type": "string",
+      "pattern": "^@[a-zA-Z0-9_]+$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 10000,
+      "default": ""
+    },
+    "avatar_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "subscribers": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "verified": {
+      "type": "boolean"
+    },
+    "video_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Public published videos on the channel."
+    },
+    "total_views": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Cumulative views across public published videos."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
