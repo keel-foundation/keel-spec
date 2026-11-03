@@ -101,6 +101,7 @@
     },
     "evidence": {
       "type": "array",
+      "maxItems": 50,
       "items": {
         "type": "object",
         "additionalProperties": false,

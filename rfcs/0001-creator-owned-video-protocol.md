@@ -3,7 +3,7 @@
 - **RFC number:** 0001
 - **Title:** Creator-owned video protocol, PeerTube-compatible, moderation-first
 - **Status:** Draft
-- **Author(s):** TubeKeel maintainers
+- **Author(s):** KeelTube maintainers
 - **Created:** 31 October 2026
 - **Discussion:** GitHub Discussions (RFC-0001)
 - **Requires:** The Keel Covenant (private draft, pending ratification), technical whitepaper (private draft)
@@ -13,7 +13,7 @@
 
 ## Abstract
 
-TubeKeel is an open, federated protocol for creator-owned video. It is designed to interoperate with PeerTube through ActivityPub where PeerTube's object model is sufficient, and to extend that model with portable creator identity, moderation records, appealable enforcement, content protection, and transparent payouts.
+KeelTube is an open, federated protocol for creator-owned video. It is designed to interoperate with PeerTube through ActivityPub where PeerTube's object model is sufficient, and to extend that model with portable creator identity, moderation records, appealable enforcement, content protection, and transparent payouts.
 
 This RFC defines the protocol direction, the compatibility boundary, the moderation-first data model, and the first implementation milestones. It does not define every endpoint or schema; those follow in later RFCs and in `keel-spec/protocol/`.
 
@@ -35,7 +35,7 @@ Centralized video platforms enforce policy at a scale that makes individual revi
 
 Existing open projects solve parts of this. PeerTube federates video but does not provide a creator bill of rights, independent appeals, transparent payouts, or content protection as protocol primitives. Owncast is live-only. Invidious and FreeTube are clients. Odysee/LBRY explores crypto-native content but not due process.
 
-TubeKeel's differentiator is not the player. It is the governance engine expressed as protocol.
+KeelTube's differentiator is not the player. It is the governance engine expressed as protocol.
 
 ---
 
@@ -43,7 +43,7 @@ TubeKeel's differentiator is not the player. It is the governance engine express
 
 1. **Creator ownership.** Creators own their content, metadata, audience relationship, and payout history.
 2. **Portability.** Export and import are first-class, documented, and available before, during, and after an enforcement action.
-3. **PeerTube compatibility.** A TubeKeel instance can follow, be followed by, and exchange video objects with PeerTube instances where the object model allows.
+3. **PeerTube compatibility.** A KeelTube instance can follow, be followed by, and exchange video objects with PeerTube instances where the object model allows.
 4. **Moderation-first.** Every enforcement action has a specific reason, evidence, human decision, audit record, appeal path, and published outcome statistics.
 5. **Content protection.** Piracy, unauthorized re-upload, impersonation, spam, scams, fraud, and fake engagement are first-class threats.
 6. **Transparent payouts.** A double-entry ledger, published holdback rules, and creator-visible balances.
@@ -79,7 +79,7 @@ The protocol is subordinate to the Constitution. The Constitution and whitepaper
 
 ## 5. Protocol overview
 
-TubeKeel has six protocol layers:
+KeelTube has six protocol layers:
 
 1. **Identity.** Actors, channels, keys, and portable creator identity.
 2. **Content.** Video objects, manifests, captions, thumbnails, and content hashes.
@@ -88,7 +88,7 @@ TubeKeel has six protocol layers:
 5. **Protection.** Fingerprints, piracy matching, spam/scam signals, impersonation, and account security.
 6. **Economics.** Payout ledger, holdbacks, and creator-visible balances.
 
-These layers are separable. An instance MAY implement content and federation without payouts; it MUST implement the moderation and portability layers to use the TubeKeel name and federation seal.
+These layers are separable. An instance MAY implement content and federation without payouts; it MUST implement the moderation and portability layers to use the KeelTube name and federation seal.
 
 ---
 
@@ -96,7 +96,7 @@ These layers are separable. An instance MAY implement content and federation wit
 
 ### 6.1 Compatibility stance
 
-TubeKeel is **PeerTube-compatible, not PeerTube-derived**. The goal is interoperability, not a fork. We reuse PeerTube's ActivityPub object model where it is sufficient, and document every extension explicitly.
+KeelTube is **PeerTube-compatible, not PeerTube-derived**. The goal is interoperability, not a fork. We reuse PeerTube's ActivityPub object model where it is sufficient, and document every extension explicitly.
 
 An instance is "PeerTube-compatible" for the purposes of this RFC when it can:
 
@@ -110,7 +110,7 @@ Full compatibility is tested against a pinned PeerTube release in `keel-spec/pro
 
 ### 6.2 Reused vocabulary
 
-Where available, TubeKeel uses:
+Where available, KeelTube uses:
 
 - ActivityPub actors and inbox/outbox collections;
 - WebFinger for discovery;
@@ -120,16 +120,16 @@ Where available, TubeKeel uses:
 
 ### 6.3 Extensions
 
-TubeKeel adds a `tubekeel` namespace for properties that PeerTube does not define:
+KeelTube adds a `keeltube` namespace for properties that PeerTube does not define:
 
-- `tubekeel:contentHash` — SHA-256 of the canonical media manifest.
-- `tubekeel:policyVersion` — the policy bundle used for a decision.
-- `tubekeel:statementOfReasons` — a link to the Statement of Reasons.
-- `tubekeel:appealUrl` — the creator-facing appeal route.
-- `tubekeel:auditDigest` — the hash-chain digest for the decision.
-- `tubekeel:trustLabels` — content-protection and provenance labels.
-- `tubekeel:payoutAccount` — an opaque payout reference, never a bank secret.
-- `tubekeel:exportBundle` — a link to the creator's export manifest.
+- `keeltube:contentHash` — SHA-256 of the canonical media manifest.
+- `keeltube:policyVersion` — the policy bundle used for a decision.
+- `keeltube:statementOfReasons` — a link to the Statement of Reasons.
+- `keeltube:appealUrl` — the creator-facing appeal route.
+- `keeltube:auditDigest` — the hash-chain digest for the decision.
+- `keeltube:trustLabels` — content-protection and provenance labels.
+- `keeltube:payoutAccount` — an opaque payout reference, never a bank secret.
+- `keeltube:exportBundle` — a link to the creator's export manifest.
 
 Extensions MUST be optional for reading and MUST NOT break PeerTube's parser. Unknown properties are ignored by compatible peers.
 
@@ -354,14 +354,23 @@ Each phase has a public demo and a written retrospective. No phase is "done" unt
 
 ### 13.1 Current implementation status
 
-As of 31 October 2026:
+As of 1 November 2026:
 
-- Draft schemas exist for video, signal, moderation case, enforcement action, appeal, and audit records.
-- The local demo implements a synthetic automated signal, a case, an enforcement action, an independent appeal review, and a hash-chained JSONL ledger with verification and export.
-- PostgreSQL persistence, real signal ingestion, policy bundles, federation, payouts, content protection, and production authentication are not implemented.
+- Draft schemas exist for actor, channel, playback manifest, video, signal, moderation case,
+  enforcement action, appeal, and audit records, with examples and CI validation.
+- Core is PostgreSQL-backed for actors, channels, and videos, with migrations, an idempotent seed
+  command, DB-backed video/channel endpoints, and a dev-only auth adapter.
+- The web client has a public watch page backed by core metadata and the demo clip, with
+  loading, not-found, removed, private, and playback-error states.
+- Moderation persists workflow state in SQLite, supports creator/moderator/appeals role
+  separation, enforces reviewer independence, exposes a review queue, and keeps the hash-chained
+  JSONL ledger with verification and export.
+- Upload, transcoding, HLS, subscriptions, real signal ingestion, policy bundles, federation,
+  payouts, content protection, and production authentication are not implemented.
 - The public Creator Covenant summary and appeal guide live in `keel-docs`.
 
-The demo is intentionally narrow. It is evidence that the appeal flow and ledger contract can be exercised end to end, not evidence that the production system exists.
+The demo is intentionally narrow. It is evidence that the creator-to-viewer-to-moderator loop and
+the ledger contract can be exercised end to end, not evidence that the production system exists.
 
 ---
 
