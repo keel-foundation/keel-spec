@@ -372,6 +372,305 @@ paths:
           description: A moderator or appeals role is required
         "404":
           description: Appeal not found
+  /v1/creator/summary:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Creator-scoped transparency counts
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+      responses:
+        "200":
+          description: Creator summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatorSummary"
+        "401":
+          description: A creator role is required
+        "403":
+          description: A creator role is required
+  /v1/creator/cases:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: List creator-scoped cases
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, reviewing, decided, appealed, closed]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Creator cases
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatorCaseList"
+        "403":
+          description: A creator role is required
+  /v1/creator/cases/{case_id}:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Read one creator case
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+        - name: case_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Creator case
+          content:
+            application/json:
+              schema:
+                $ref: "./moderation-case.schema.json"
+        "403":
+          description: A creator role is required
+        "404":
+          description: Case not found for this creator
+  /v1/creator/actions:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: List creator-scoped enforcement actions
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, reversed, expired]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Creator actions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatorActionList"
+        "403":
+          description: A creator role is required
+  /v1/creator/actions/{action_id}:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Read one creator action
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+        - name: action_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Creator action
+          content:
+            application/json:
+              schema:
+                $ref: "./enforcement-action.schema.json"
+        "403":
+          description: A creator role is required
+        "404":
+          description: Action not found for this creator
+  /v1/creator/appeals:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: List creator-scoped appeals
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, decided]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Creator appeals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatorAppealList"
+        "403":
+          description: A creator role is required
+  /v1/creator/appeals/{appeal_id}:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Read one creator appeal
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+        - name: appeal_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Creator appeal
+          content:
+            application/json:
+              schema:
+                $ref: "./appeal.schema.json"
+        "403":
+          description: A creator role is required
+        "404":
+          description: Appeal not found for this creator
+  /v1/creator/ledger:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Read creator-scoped audit records
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Creator ledger and full-chain verification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatorLedger"
+        "403":
+          description: A creator role is required
+  /v1/creator/ledger/verify:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Verify the complete hash chain
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+      responses:
+        "200":
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Verification"
+        "403":
+          description: A creator role is required
+  /v1/creator/ledger/export:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Export creator-scoped audit records
+      security:
+        - {}
+        - demoToken: []
+      parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [jsonl, csv]
+            default: jsonl
+      responses:
+        "200":
+          description: Creator ledger file
+          content:
+            application/x-ndjson:
+              schema:
+                type: string
+            text/csv:
+              schema:
+                type: string
+        "403":
+          description: A creator role is required
   /v1/ledger:
     servers:
       - url: http://localhost:8082
@@ -438,6 +737,16 @@ components:
       type: http
       scheme: bearer
       description: Dev-only actor token for core; set KEELTUBE_DEV_ACTOR_TOKEN.
+  parameters:
+    CreatorChannel:
+      name: channel_id
+      in: query
+      required: false
+      description: Required when the authenticated creator principal has multiple channel claims.
+      schema:
+        type: string
+        pattern: "^ch_[a-zA-Z0-9_]+$"
+        maxLength: 80
   schemas:
     Channel:
       $ref: "./channel.schema.json"
@@ -514,6 +823,108 @@ components:
           type: object
         verification:
           $ref: "#/components/schemas/Verification"
+    CreatorSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - channel_id
+        - cases_total
+        - open_cases
+        - actions_total
+        - active_actions
+        - appeals_total
+        - pending_appeals
+        - decided_appeals
+        - ledger_records
+      properties:
+        channel_id:
+          type: string
+        cases_total:
+          type: integer
+        open_cases:
+          type: integer
+        actions_total:
+          type: integer
+        active_actions:
+          type: integer
+        appeals_total:
+          type: integer
+        pending_appeals:
+          type: integer
+        decided_appeals:
+          type: integer
+        ledger_records:
+          type: integer
+    CreatorCaseList:
+      type: object
+      additionalProperties: false
+      required: [cases, total, limit, offset, channel_id]
+      properties:
+        cases:
+          type: array
+          items:
+            $ref: "./moderation-case.schema.json"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        channel_id:
+          type: string
+    CreatorActionList:
+      type: object
+      additionalProperties: false
+      required: [actions, total, limit, offset, channel_id]
+      properties:
+        actions:
+          type: array
+          items:
+            $ref: "./enforcement-action.schema.json"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        channel_id:
+          type: string
+    CreatorAppealList:
+      type: object
+      additionalProperties: false
+      required: [appeals, total, limit, offset, channel_id]
+      properties:
+        appeals:
+          type: array
+          items:
+            $ref: "./appeal.schema.json"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        channel_id:
+          type: string
+    CreatorLedger:
+      type: object
+      additionalProperties: false
+      required: [ledger, verification, total, limit, offset, channel_id]
+      properties:
+        ledger:
+          type: array
+          items:
+            $ref: "./audit-record.schema.json"
+        verification:
+          $ref: "#/components/schemas/Verification"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        channel_id:
+          type: string
     ActionCreate:
       type: object
       additionalProperties: false
@@ -523,6 +934,11 @@ components:
           type: string
           pattern: "^vid_[a-zA-Z0-9_]+$"
           maxLength: 80
+        channel_id:
+          type: string
+          pattern: "^ch_[a-zA-Z0-9_]+$"
+          maxLength: 80
+          default: ch_demo
         policy_clause:
           type: string
           minLength: 1
