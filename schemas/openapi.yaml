@@ -4,8 +4,8 @@ info:
   version: 0.1.0
   description: |
     Draft contract for the local KeelTube demo. Core runs on port 8080 and
-    moderation runs on port 8082. The demo token is optional locally and
-    required when KEELTUBE_DEMO_TOKEN is set.
+    moderation runs on port 8082. Moderation requires OIDC claims or all three
+    role tokens and fails closed when authentication is not configured.
 
     Moderation v0.1 is frozen as of 2026-11-01. Additive changes only until
     v0.2; see DECISIONS.md.
@@ -1677,6 +1677,291 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StudioUploadResponse"
+  /api/v1/studio/moderation/summary:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Creator-scoped moderation counts
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Moderation summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModerationSummary"
+        "401":
+          description: A session is required
+        "503":
+          description: The moderation service is not configured
+  /api/v1/studio/moderation/cases:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List creator-scoped moderation cases
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, reviewing, decided, appealed, closed]
+        - $ref: "#/components/parameters/ModerationLimit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Creator case page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModerationCasePage"
+        "401":
+          description: A session is required
+        "422":
+          description: Invalid status, limit, or offset
+        "503":
+          description: The moderation service is not configured
+  /api/v1/studio/moderation/cases/{id}:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read one creator-scoped moderation case
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ModerationRecordID"
+      responses:
+        "200":
+          description: Moderation case
+          content:
+            application/json:
+              schema:
+                $ref: "./moderation-case.schema.json"
+        "401":
+          description: A session is required
+        "404":
+          description: Case not found for this creator
+        "503":
+          description: The moderation service is not configured
+  /api/v1/studio/moderation/actions:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List creator-scoped enforcement actions
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, reversed, expired]
+        - $ref: "#/components/parameters/ModerationLimit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Creator action page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModerationActionPage"
+        "401":
+          description: A session is required
+        "422":
+          description: Invalid status, limit, or offset
+        "503":
+          description: The moderation service is not configured
+  /api/v1/studio/moderation/actions/{id}:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read one creator-scoped enforcement action
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ModerationRecordID"
+      responses:
+        "200":
+          description: Enforcement action
+          content:
+            application/json:
+              schema:
+                $ref: "./enforcement-action.schema.json"
+        "401":
+          description: A session is required
+        "404":
+          description: Action not found for this creator
+        "503":
+          description: The moderation service is not configured
+  /api/v1/studio/moderation/actions/{id}/appeal:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: File an appeal on a creator-scoped enforcement action
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ModerationRecordID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModerationAppealRequest"
+      responses:
+        "201":
+          description: Filed appeal
+          content:
+            application/json:
+              schema:
+                $ref: "./appeal.schema.json"
+        "401":
+          description: A session is required
+        "403":
+          description: CSRF validation failed or the channel is not authorized
+        "404":
+          description: Action not found for this creator
+        "409":
+          description: The action is not appealable or an appeal is already pending
+        "422":
+          description: Invalid appeal
+        "503":
+          description: The moderation service is not configured
+  /api/v1/studio/moderation/appeals:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List creator-scoped appeals
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, decided]
+        - $ref: "#/components/parameters/ModerationLimit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Creator appeal page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModerationAppealPage"
+        "401":
+          description: A session is required
+        "422":
+          description: Invalid status, limit, or offset
+        "503":
+          description: The moderation service is not configured
+  /api/v1/studio/moderation/appeals/{id}:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read one creator-scoped appeal
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ModerationRecordID"
+      responses:
+        "200":
+          description: Appeal
+          content:
+            application/json:
+              schema:
+                $ref: "./appeal.schema.json"
+        "401":
+          description: A session is required
+        "404":
+          description: Appeal not found for this creator
+        "503":
+          description: The moderation service is not configured
+  /api/v1/studio/moderation/ledger:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read creator-scoped audit records
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ModerationLimit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Creator ledger page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModerationLedgerPage"
+        "401":
+          description: A session is required
+        "422":
+          description: Invalid limit or offset
+        "503":
+          description: The moderation service is not configured
+  /api/v1/studio/moderation/ledger/verify:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Verify the complete audit chain
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModerationVerification"
+        "401":
+          description: A session is required
+        "503":
+          description: The moderation service is not configured
+  /api/v1/studio/moderation/ledger/export:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Export creator-scoped audit records
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [jsonl, csv]
+            default: jsonl
+      responses:
+        "200":
+          description: Creator ledger export
+          content:
+            application/x-ndjson:
+              schema:
+                type: string
+            text/csv:
+              schema:
+                type: string
+        "401":
+          description: A session is required
+        "422":
+          description: Invalid format
+        "503":
+          description: The moderation service is not configured
   /api/v1/media/{id}/video.mp4:
     servers:
       - url: http://localhost:8080
@@ -2003,7 +2288,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/WhoAmI"
         "401":
-          description: A role or demo token is required
+          description: A valid bearer token is required
   /v1/appeals:
     servers:
       - url: http://localhost:8082
@@ -2481,6 +2766,20 @@ components:
       required: true
       schema:
         type: string
+    ModerationRecordID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    ModerationLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
     CSRFHeader:
       name: X-CSRF-Token
       in: header
@@ -2506,6 +2805,120 @@ components:
           type: string
         field:
           type: string
+    ModerationSummary:
+      type: object
+      required: [channel_id]
+      properties:
+        channel_id:
+          type: string
+        cases_total:
+          type: integer
+        open_cases:
+          type: integer
+        actions_total:
+          type: integer
+        active_actions:
+          type: integer
+        appeals_total:
+          type: integer
+        pending_appeals:
+          type: integer
+        decided_appeals:
+          type: integer
+        ledger_records:
+          type: integer
+    ModerationCasePage:
+      type: object
+      required: [cases, total, limit, offset, channel_id]
+      properties:
+        cases:
+          type: array
+          items:
+            $ref: "./moderation-case.schema.json"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        channel_id:
+          type: string
+    ModerationActionPage:
+      type: object
+      required: [actions, total, limit, offset, channel_id]
+      properties:
+        actions:
+          type: array
+          items:
+            $ref: "./enforcement-action.schema.json"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        channel_id:
+          type: string
+    ModerationAppealPage:
+      type: object
+      required: [appeals, total, limit, offset, channel_id]
+      properties:
+        appeals:
+          type: array
+          items:
+            $ref: "./appeal.schema.json"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        channel_id:
+          type: string
+    ModerationLedgerPage:
+      type: object
+      required: [ledger, verification, total, limit, offset, channel_id]
+      properties:
+        ledger:
+          type: array
+          items:
+            $ref: "./audit-record.schema.json"
+        verification:
+          $ref: "#/components/schemas/ModerationVerification"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        channel_id:
+          type: string
+    ModerationVerification:
+      type: object
+      required: [valid, records, head]
+      properties:
+        valid:
+          type: boolean
+        records:
+          type: integer
+        head:
+          type: string
+        first_broken:
+          type: [integer, "null"]
+        reason:
+          type: [string, "null"]
+    ModerationAppealRequest:
+      type: object
+      additionalProperties: false
+      required: [grounds, statement]
+      properties:
+        grounds:
+          type: string
+          enum: [new_evidence, procedural_error, policy_misapplication, identity, other]
+        statement:
+          type: string
+          minLength: 1
+          maxLength: 4000
     VideoCategory:
       type: string
       enum: [Documentaries, Protocol, Moderation, Studio, Federation]
