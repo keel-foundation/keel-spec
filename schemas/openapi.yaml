@@ -102,6 +102,18 @@ paths:
                 $ref: "./video.schema.json"
         "404":
           description: Video not found
+        "410":
+          description: Video was removed; the body carries a canonical tombstone record
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [detail, video]
+                properties:
+                  detail:
+                    type: string
+                  video:
+                    $ref: "#/components/schemas/VideoTombstone"
   /api/v1/demo:
     servers:
       - url: http://localhost:8080
@@ -317,6 +329,158 @@ paths:
                 $ref: "#/components/schemas/VideoAnalyticsResponse"
         "404":
           description: Video not found for this creator
+  /.well-known/webfinger:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [federation]
+      summary: Resolve a local actor by acct URI
+      parameters:
+        - name: resource
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: WebFinger JRD
+          content:
+            application/jrd+json:
+              schema:
+                type: object
+        "404":
+          description: Actor not found
+  /federation/actors/{id}:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [federation]
+      summary: Read an ActivityPub actor document
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Actor document
+          content:
+            application/activity+json:
+              schema:
+                type: object
+        "404":
+          description: Actor not found
+  /federation/actors/{id}/outbox:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [federation]
+      summary: Read an actor outbox
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Ordered collection of Create activities
+          content:
+            application/activity+json:
+              schema:
+                type: object
+  /federation/actors/{id}/followers:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [federation]
+      summary: Read an actor followers collection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Followers collection
+          content:
+            application/activity+json:
+              schema:
+                type: object
+  /federation/actors/{id}/following:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [federation]
+      summary: Read an actor following collection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Following collection
+          content:
+            application/activity+json:
+              schema:
+                type: object
+  /federation/actors/{id}/inbox:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [federation]
+      summary: Receive a signed ActivityPub activity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "202":
+          description: Activity accepted or already processed
+        "401":
+          description: Missing or invalid HTTP signature
+        "403":
+          description: Blocked peer or mismatched actor
+  /federation/videos/{id}:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [federation]
+      summary: Read a public video as a PeerTube-compatible object
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Video object
+          content:
+            application/activity+json:
+              schema:
+                type: object
+        "404":
+          description: Video not found or not public
+  /federation/policy:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [federation]
+      summary: Read the signed instance policy document
+      responses:
+        "200":
+          description: Instance policy
+          content:
+            application/activity+json:
+              schema:
+                type: object
   /api/v1/feed:
     servers:
       - url: http://localhost:8080
@@ -488,6 +652,10 @@ paths:
             type: string
             enum: [all, videos, shorts, channels]
             default: all
+        - name: channel_id
+          in: query
+          schema:
+            type: string
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
       responses:
@@ -728,6 +896,133 @@ paths:
           description: Invalid or expired reset token
         "429":
           description: Rate limit exceeded
+  /api/v1/auth/social/providers:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List configured social sign-in providers
+      responses:
+        "200":
+          description: Configured providers
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [providers]
+                properties:
+                  providers:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required: [id, name]
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+  /api/v1/auth/social/{provider}/start:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Start a social OIDC or OAuth sign-in
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: return_to
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [json]
+      responses:
+        "302":
+          description: Redirect to the provider
+        "200":
+          description: Provider URL when format=json
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [authorization_url, expires_at]
+                properties:
+                  authorization_url:
+                    type: string
+                    format: uri
+                  expires_at:
+                    type: string
+                    format: date-time
+        "404":
+          description: Provider not configured
+        "429":
+          description: Rate limit exceeded
+  /api/v1/auth/social/{provider}/callback:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Complete a social OIDC or OAuth sign-in
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [json]
+      responses:
+        "302":
+          description: Redirect back to the web app with session cookies
+        "200":
+          description: Active session when format=json
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "400":
+          description: Invalid or expired state
+        "401":
+          description: Invalid provider claims
+        "502":
+          description: Provider token exchange failed
+    post:
+      tags: [core]
+      summary: Complete an Apple form_post callback
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect back to the web app with session cookies
+        "400":
+          description: Invalid or expired state
   /api/v1/channels/{id}/subscription:
     servers:
       - url: http://localhost:8080
@@ -1155,6 +1450,101 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MarkAllNotificationsResponse"
+  /internal/v1/federation:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [internal]
+      summary: Inspect federation instance, peers, relationships, and deliveries
+      security:
+        - internalToken: []
+      responses:
+        "200":
+          description: Federation snapshot
+          content:
+            application/json:
+              schema:
+                type: object
+  /internal/v1/federation/follow:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [internal]
+      summary: Follow a remote ActivityPub actor
+      security:
+        - internalToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actor_url]
+              properties:
+                actor_url:
+                  type: string
+                  format: uri
+      responses:
+        "202":
+          description: Follow queued
+  /internal/v1/federation/unfollow:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [internal]
+      summary: Unfollow a remote ActivityPub actor
+      security:
+        - internalToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actor_url]
+              properties:
+                actor_url:
+                  type: string
+                  format: uri
+      responses:
+        "204":
+          description: Follow removed
+  /internal/v1/federation/peers/status:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [internal]
+      summary: Block or unblock a federation peer
+      security:
+        - internalToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actor_url, status]
+              properties:
+                actor_url:
+                  type: string
+                  format: uri
+                status:
+                  type: string
+                  enum: [active, blocked]
+      responses:
+        "204":
+          description: Peer status changed
+  /internal/v1/federation/deliveries/process:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [internal]
+      summary: Process queued federation deliveries now
+      security:
+        - internalToken: []
+      responses:
+        "204":
+          description: Delivery queue processed
   /internal/v1/notifications:
     servers:
       - url: http://localhost:8080
@@ -1206,6 +1596,28 @@ paths:
                 $ref: "#/components/schemas/StudioChannelResponse"
         "403":
           description: A creator channel is required
+    patch:
+      tags: [core]
+      summary: Update the creator channel profile
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChannelProfileRequest"
+      responses:
+        "200":
+          description: Updated channel
+          content:
+            application/json:
+              schema:
+                $ref: "./channel.schema.json"
+        "422":
+          description: Invalid profile
   /api/v1/studio/videos:
     servers:
       - url: http://localhost:8080
@@ -1312,6 +1724,23 @@ paths:
           description: The video changed since it was loaded
         "422":
           description: Invalid metadata
+    delete:
+      tags: [core]
+      summary: Archive an own video
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/StudioVideoID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Archived video
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Video"
+        "409":
+          description: Video cannot be archived in its current state
   /api/v1/studio/videos/{id}/publish:
     servers:
       - url: http://localhost:8080
@@ -1560,6 +1989,27 @@ paths:
   /api/v1/studio/uploads:
     servers:
       - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List own uploads
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Upload intents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadPage"
+        "401":
+          description: A session is required
     post:
       tags: [core]
       summary: Create a multipart upload intent
@@ -2164,6 +2614,44 @@ paths:
   /v1/actions:
     servers:
       - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: List enforcement actions for staff review
+      security:
+        - moderatorToken: []
+        - appealsToken: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, reversed, expired]
+        - name: channel_id
+          in: query
+          schema:
+            type: string
+        - name: video_id
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        "200":
+          description: Action page
+          content:
+            application/json:
+              schema:
+                type: object
     post:
       tags: [moderation]
       summary: Create a demo enforcement action
@@ -2193,6 +2681,222 @@ paths:
           description: Request validation failed
         "429":
           description: Rate limit exceeded
+  /v1/signals:
+    servers:
+      - url: http://localhost:8082
+    post:
+      tags: [moderation]
+      summary: Ingest a viewer report as a signal
+      security:
+        - internalToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignalCreate"
+      responses:
+        "201":
+          description: Created case and signal
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [case, signal]
+                properties:
+                  case:
+                    $ref: "./moderation-case.schema.json"
+                  signal:
+                    $ref: "./signal.schema.json"
+        "401":
+          description: A valid ingest token is required
+        "422":
+          description: Request validation failed
+        "429":
+          description: Rate limit exceeded
+        "503":
+          description: Signal ingestion is not configured
+  /v1/summary:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Staff moderation queue summary
+      security:
+        - moderatorToken: []
+        - appealsToken: []
+      responses:
+        "200":
+          description: Queue counts and ledger status
+          content:
+            application/json:
+              schema:
+                type: object
+  /v1/cases:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: List cases for staff review
+      security:
+        - moderatorToken: []
+        - appealsToken: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, reviewing, decided, appealed, closed]
+        - name: channel_id
+          in: query
+          schema:
+            type: string
+        - name: video_id
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        "200":
+          description: Case page
+          content:
+            application/json:
+              schema:
+                type: object
+  /v1/cases/{case_id}:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Read a case for staff review
+      security:
+        - moderatorToken: []
+        - appealsToken: []
+      parameters:
+        - name: case_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Case with channel scope
+          content:
+            application/json:
+              schema:
+                type: object
+        "404":
+          description: Case not found
+  /v1/cases/{case_id}/actions:
+    servers:
+      - url: http://localhost:8082
+    post:
+      tags: [moderation]
+      summary: Record an enforcement action for an existing case
+      security:
+        - moderatorToken: []
+      parameters:
+        - name: case_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [policy_clause, reason, evidence]
+              properties:
+                action_type:
+                  type: string
+                  enum: [label, remove, age_restrict, demonetize]
+                policy_clause:
+                  type: string
+                reason:
+                  type: string
+                evidence:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+      responses:
+        "201":
+          description: Enforcement action
+          content:
+            application/json:
+              schema:
+                $ref: "./enforcement-action.schema.json"
+        "409":
+          description: Case already has a final decision
+  /v1/cases/{case_id}/dismiss:
+    servers:
+      - url: http://localhost:8082
+    post:
+      tags: [moderation]
+      summary: Close a case without enforcement
+      security:
+        - moderatorToken: []
+      parameters:
+        - name: case_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Dismissed case
+          content:
+            application/json:
+              schema:
+                $ref: "./moderation-case.schema.json"
+        "409":
+          description: Case already has a final decision
+  /v1/actions/{action_id}:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Read an enforcement action for staff review
+      security:
+        - moderatorToken: []
+        - appealsToken: []
+      parameters:
+        - name: action_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Enforcement action with channel scope
+          content:
+            application/json:
+              schema:
+                type: object
+        "404":
+          description: Action not found
   /v1/actions/{action_id}/appeal:
     servers:
       - url: http://localhost:8082
@@ -2203,6 +2907,7 @@ paths:
         - {}
         - demoToken: []
       parameters:
+        - $ref: "#/components/parameters/CreatorChannel"
         - name: action_id
           in: path
           required: true
@@ -2372,6 +3077,11 @@ paths:
         - demoToken: []
       parameters:
         - $ref: "#/components/parameters/CreatorChannel"
+        - name: video_id
+          in: query
+          schema:
+            type: string
+            pattern: "^vid_[a-zA-Z0-9_]+$"
         - name: status
           in: query
           schema:
@@ -2437,6 +3147,11 @@ paths:
         - demoToken: []
       parameters:
         - $ref: "#/components/parameters/CreatorChannel"
+        - name: video_id
+          in: query
+          schema:
+            type: string
+            pattern: "^vid_[a-zA-Z0-9_]+$"
         - name: status
           in: query
           schema:
@@ -2695,6 +3410,693 @@ paths:
             text/csv:
               schema:
                 type: string
+  /api/v1/reports:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Submit a viewer report
+      security:
+        - {}
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportRequest"
+      responses:
+        "201":
+          description: Report accepted as a signal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportResponse"
+        "404":
+          description: Subject not found or not accessible
+        "422":
+          description: Request validation failed
+        "503":
+          description: Moderation or report ingestion is not configured
+  /api/v1/studio/comments:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List comments across own videos for export
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Channel-scoped comments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentPage"
+        "401":
+          description: A session is required
+  /api/v1/studio/monetization:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read own monetization settings and balance
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Monetization record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Monetization"
+        "401":
+          description: A session is required
+  /api/v1/studio/earnings:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List own earnings ledger
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Earnings entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EarningPage"
+        "401":
+          description: A session is required
+  /api/v1/studio/payouts:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List own payout history
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Payout entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayoutPage"
+        "401":
+          description: A session is required
+  /api/v1/channels:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List or bulk-load channels
+      parameters:
+        - name: ids
+          in: query
+          schema:
+            type: string
+            description: Comma-separated channel IDs
+        - name: q
+          in: query
+          schema:
+            type: string
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Channel page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelPage"
+  /api/v1/search/semantic:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Semantic video search using pgvector embeddings
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+        - name: channel_id
+          in: query
+          schema:
+            type: string
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [video, short]
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Semantic results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecommendedVideoPage"
+        "503":
+          description: Embeddings are unavailable
+  /api/v1/search/suggestions:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Search suggestions for videos, shorts, and channels
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 5
+      responses:
+        "200":
+          description: Suggestions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [videos, shorts, channels]
+                properties:
+                  videos:
+                    type: array
+                    items:
+                      $ref: "./video.schema.json"
+                  shorts:
+                    type: array
+                    items:
+                      $ref: "./video.schema.json"
+                  channels:
+                    type: array
+                    items:
+                      $ref: "./channel.schema.json"
+  /api/v1/videos/{id}/trust:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Public trust record for a video
+      parameters:
+        - $ref: "#/components/parameters/VideoID"
+      responses:
+        "200":
+          description: Public case, action, and appeal record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicVideoRecord"
+        "404":
+          description: Video not found or not public
+  /api/v1/studio/videos/{id}/restore:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Restore an archived video as a draft
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/StudioVideoID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Restored video
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Video"
+  /api/v1/studio/videos/{id}/purge:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Irreversibly purge an archived video and all media objects
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/StudioVideoID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "204":
+          description: Video and media objects deleted
+        "404":
+          description: Video not found for this creator
+        "409":
+          description: Video must be archived and have no active media work
+        "503":
+          description: Media storage is not configured or cannot delete prefixes
+  /api/v1/studio/videos/{id}/schedule:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Schedule a draft to publish
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/StudioVideoID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudioScheduleRequest"
+      responses:
+        "200":
+          description: Scheduled video
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Video"
+    delete:
+      tags: [core]
+      summary: Clear a scheduled publish time
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/StudioVideoID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Video with schedule cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Video"
+  /api/v1/studio/comments/{id}/pin:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Pin a comment on an own video
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/CommentID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Pinned comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+    delete:
+      tags: [core]
+      summary: Unpin a comment
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/CommentID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Unpinned comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+  /api/v1/studio/comments/{id}:
+    servers:
+      - url: http://localhost:8080
+    delete:
+      tags: [core]
+      summary: Remove a comment and its direct replies
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/CommentID"
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "204":
+          description: Comment removed
+  /api/v1/me/playlists:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List own playlists and collections
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Own playlists
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Playlist"
+    post:
+      tags: [core]
+      summary: Create a playlist or collection
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaylistRequest"
+      responses:
+        "201":
+          description: Created playlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Playlist"
+  /api/v1/playlists/{id}:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read a playlist or collection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Playlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Playlist"
+        "404":
+          description: Not found or private
+    patch:
+      tags: [core]
+      summary: Update an own playlist
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaylistRequest"
+      responses:
+        "200":
+          description: Updated playlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Playlist"
+    delete:
+      tags: [core]
+      summary: Delete an own playlist
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "204":
+          description: Deleted
+  /api/v1/playlists/{id}/videos:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List playlist videos
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Playlist items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaylistItemPage"
+    post:
+      tags: [core]
+      summary: Add a video to an own playlist
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaylistItemRequest"
+      responses:
+        "200":
+          description: Updated playlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Playlist"
+  /api/v1/playlists/{id}/videos/{video_id}:
+    servers:
+      - url: http://localhost:8080
+    delete:
+      tags: [core]
+      summary: Remove a video from an own playlist
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: video_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "204":
+          description: Removed
+  /api/v1/reports/{id}:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read the status of an own report
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Report status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "404":
+          description: Report not found for this viewer
+  /api/v1/me/reports:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List own reports
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Reports
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportPage"
+  /v1/public/videos/{video_id}/record:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Public creator-safe trust record for a video
+      parameters:
+        - name: video_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Public moderation record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicVideoRecord"
+  /internal/v1/finance/payouts:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Push a finance payout event as a creator notification
+      security:
+        - internalToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [channel_id, payout_id, status]
+              properties:
+                channel_id:
+                  type: string
+                payout_id:
+                  type: string
+                period:
+                  type: string
+                amount:
+                  type: number
+                status:
+                  type: string
+                  enum: [paid, pending, held]
+      responses:
+        "200":
+          description: Accepted
+        "401":
+          description: Internal token required
+        "422":
+          description: Invalid finance event
+  /api/v1/me/password:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Change the current account password
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "204":
+          description: Password changed; other sessions revoked
+        "403":
+          description: Current password is incorrect
+        "422":
+          description: Invalid new password
+  /api/v1/me/sessions:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: List account sessions
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SessionInfo"
+  /api/v1/me/sessions/{id}:
+    servers:
+      - url: http://localhost:8080
+    delete:
+      tags: [core]
+      summary: Revoke one account session
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "204":
+          description: Session revoked
+        "404":
+          description: Session not found
+  /api/v1/me/sessions/revoke-others:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Revoke all other account sessions
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "204":
+          description: Other sessions revoked
 components:
   securitySchemes:
     demoToken:
@@ -2712,7 +4114,7 @@ components:
     internalToken:
       type: http
       scheme: bearer
-      description: Service-to-service token; set KEELTUBE_INTERNAL_TOKEN on core.
+      description: Service-to-service token; set KEELTUBE_INTERNAL_TOKEN on core or KEELTUBE_SIGNAL_INGEST_TOKEN on moderation.
   parameters:
     Limit:
       name: limit
@@ -2919,12 +4321,469 @@ components:
           type: string
           minLength: 1
           maxLength: 4000
+    SignalCreate:
+      type: object
+      additionalProperties: false
+      required: [subject_type, subject_id, channel_id, reason, details]
+      properties:
+        subject_type:
+          type: string
+          enum: [video, channel]
+        subject_id:
+          type: string
+          minLength: 1
+          maxLength: 80
+        channel_id:
+          type: string
+          pattern: "^ch_[a-zA-Z0-9_]+$"
+        reason:
+          type: string
+          enum: [spam, scam, piracy, impersonation, harassment, csam, copyright, terrorism, other]
+        details:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        reporter_id:
+          type: string
+          maxLength: 80
+    ReportRequest:
+      type: object
+      additionalProperties: false
+      required: [subject_type, subject_id, reason, details]
+      properties:
+        subject_type:
+          type: string
+          enum: [video, channel]
+        subject_id:
+          type: string
+          minLength: 1
+          maxLength: 80
+        reason:
+          type: string
+          enum: [spam, scam, piracy, impersonation, harassment, csam, copyright, terrorism, other]
+        details:
+          type: string
+          minLength: 1
+          maxLength: 4000
+    ReportResponse:
+      type: object
+      required: [case, signal, report_id, status]
+      properties:
+        case:
+          $ref: "./moderation-case.schema.json"
+        signal:
+          $ref: "./signal.schema.json"
+        report_id:
+          type: string
+        status:
+          type: string
+    Monetization:
+      type: object
+      additionalProperties: false
+      required: [channel_id, eligible, rpm, holdback, balance, currency, updated_at]
+      properties:
+        channel_id:
+          type: string
+        eligible:
+          type: boolean
+        rpm:
+          type: number
+        holdback:
+          type: number
+        balance:
+          type: number
+        currency:
+          type: string
+        next_payout:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Earning:
+      type: object
+      additionalProperties: false
+      required: [id, date, description, type, amount, balance]
+      properties:
+        id:
+          type: string
+        channel_id:
+          type: string
+        date:
+          type: string
+          format: date-time
+        description:
+          type: string
+        type:
+          type: string
+          enum: [ad_revenue, membership, payout, holdback]
+        amount:
+          type: number
+        balance:
+          type: number
+    EarningPage:
+      type: object
+      required: [items, limit, offset, total, has_more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Earning"
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+    Payout:
+      type: object
+      additionalProperties: false
+      required: [id, period, amount, status, date]
+      properties:
+        id:
+          type: string
+        channel_id:
+          type: string
+        period:
+          type: string
+        amount:
+          type: number
+        status:
+          type: string
+          enum: [paid, pending, held]
+        date:
+          type: string
+          format: date-time
+    PayoutPage:
+      type: object
+      required: [items, limit, offset, total, has_more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Payout"
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+    UploadPage:
+      type: object
+      required: [items, limit, offset, total, has_more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/UploadIntent"
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+    ChannelProfileRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 10000
+        avatar_url:
+          type: string
+          maxLength: 500
+        banner_url:
+          type: string
+          maxLength: 500
+        links:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            additionalProperties: false
+            required: [label, url]
+            properties:
+              label:
+                type: string
+                minLength: 1
+                maxLength: 80
+              url:
+                type: string
+                format: uri
+    StudioScheduleRequest:
+      type: object
+      additionalProperties: false
+      required: [scheduled_at]
+      properties:
+        scheduled_at:
+          type: string
+          format: date-time
+    PlaylistRequest:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        kind:
+          type: string
+          enum: [playlist, collection]
+          default: playlist
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 5000
+        visibility:
+          type: string
+          enum: [public, unlisted, private]
+          default: private
+    Playlist:
+      type: object
+      additionalProperties: false
+      required: [id, actor_id, kind, title, visibility, item_count, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        actor_id:
+          type: string
+        kind:
+          type: string
+          enum: [playlist, collection]
+        title:
+          type: string
+        description:
+          type: string
+        visibility:
+          type: string
+          enum: [public, unlisted, private]
+        item_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    PlaylistItemRequest:
+      type: object
+      additionalProperties: false
+      required: [video_id]
+      properties:
+        video_id:
+          type: string
+    PlaylistItem:
+      type: object
+      additionalProperties: false
+      required: [playlist_id, video_id, position, added_at, video]
+      properties:
+        playlist_id:
+          type: string
+        video_id:
+          type: string
+        position:
+          type: integer
+        added_at:
+          type: string
+          format: date-time
+        video:
+          $ref: "./video.schema.json"
+    PlaylistItemPage:
+      type: object
+      required: [items, limit, offset, total, has_more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlaylistItem"
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+    Report:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - subject_type
+        - subject_id
+        - channel_id
+        - reason
+        - details
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        subject_type:
+          type: string
+          enum: [video, channel]
+        subject_id:
+          type: string
+        channel_id:
+          type: string
+        reason:
+          type: string
+        details:
+          type: string
+        reporter_id:
+          type: string
+        status:
+          type: string
+        moderation_case_id:
+          type: string
+        moderation_signal_id:
+          type: string
+        error:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ReportPage:
+      type: object
+      required: [items, limit, offset, total, has_more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Report"
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+    PublicVideoRecord:
+      type: object
+      additionalProperties: false
+      required: [video_id, cases, actions, appeals]
+      properties:
+        video_id:
+          type: string
+        cases:
+          type: array
+          items:
+            $ref: "./moderation-case.schema.json"
+        actions:
+          type: array
+          items:
+            $ref: "./enforcement-action.schema.json"
+        appeals:
+          type: array
+          items:
+            $ref: "./appeal.schema.json"
+    ChangePasswordRequest:
+      type: object
+      additionalProperties: false
+      required: [current_password, new_password]
+      properties:
+        current_password:
+          type: string
+          minLength: 1
+        new_password:
+          type: string
+          minLength: 8
+          maxLength: 128
+    SessionInfo:
+      type: object
+      additionalProperties: false
+      required: [id, current, provider, created_at, last_seen_at, expires_at]
+      properties:
+        id:
+          type: string
+        current:
+          type: boolean
+        provider:
+          type: string
+        user_agent:
+          type: string
+        ip_address:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        last_seen_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        revoked_at:
+          type: string
+          format: date-time
     VideoCategory:
       type: string
       enum: [Documentaries, Protocol, Moderation, Studio, Federation]
     VideoVisibility:
       type: string
       enum: [public, unlisted, private]
+    VideoTombstone:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - public_id
+        - channel_id
+        - title
+        - status
+        - visibility
+        - content_hash
+        - duration_seconds
+        - license
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        public_id:
+          type: string
+        channel_id:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+          enum: [removed]
+        visibility:
+          type: string
+          enum: [public, unlisted, private]
+        content_hash:
+          type: string
+        duration_seconds:
+          type: integer
+        license:
+          type: string
+        policy:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+        published_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     VideoPage:
       type: object
       required: [items, limit, offset, total, has_more]
@@ -3666,6 +5525,7 @@ components:
         - likes
         - comments
         - subscribers
+        - revenue
         - analytics_views
         - analytics_sessions
         - watch_seconds
@@ -3693,6 +5553,8 @@ components:
           type: integer
         subscribers:
           type: integer
+        revenue:
+          type: number
         analytics_views:
           type: integer
         analytics_sessions:

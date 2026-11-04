@@ -45,7 +45,7 @@
     },
     "status": {
       "type": "string",
-      "enum": ["draft", "processing", "published", "removed", "demonetized"]
+      "enum": ["draft", "processing", "published", "removed", "demonetized", "archived"]
     },
     "visibility": {
       "type": "string",
@@ -134,6 +134,14 @@
       "format": "date-time"
     },
     "published_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "scheduled_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "archived_at": {
       "type": "string",
       "format": "date-time"
     },

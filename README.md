@@ -14,10 +14,14 @@ This repository contains the normative protocol specification, RFCs, schemas, an
   enforcement actions, appeals, and audit records, with examples and CI validation.
 - Moderation v0.1 is frozen as of 2026-11-01. Additive changes only until v0.2.
 - Core is PostgreSQL-backed and implements catalog and discovery, identity, engagement, creator
-  studio upload/transcoding/HLS, watch telemetry and creator analytics, and creator notifications.
+  studio upload/transcoding/HLS, watch telemetry and creator analytics, creator notifications,
+  viewer report ingestion, semantic search, playlists, channel profiles, scheduled publishing,
+  comment moderation, public trust records, irreversible archived-video media purge, Google/Apple/X
+  social sign-in, ActivityPub federation, and read-only demo finance.
   The web client is fully built against local preview data, including the feed, watch page,
   channels, search, library, creator studio, and creator moderation record; API adapters are next.
-  Federation, payouts, and the production staff moderation portal are not implemented.
+  PeerTube-compatible ActivityPub federation v0.1 and a separate private staff moderation portal are
+  implemented. Payouts are still a read-only demo.
 
 ## Checks
 
