@@ -2576,6 +2576,65 @@ paths:
                     type: array
                     items:
                       type: object
+  /v1/transparency:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Public transparency report
+      description: Generated from the workflow store and audit ledger, not hand-edited.
+      parameters:
+        - name: since
+          in: query
+          schema:
+            type: string
+          description: ISO date or timestamp lower bound
+        - name: until
+          in: query
+          schema:
+            type: string
+          description: ISO date or timestamp upper bound
+      responses:
+        "200":
+          description: Transparency report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransparencyReport"
+  /v1/transparency/export:
+    servers:
+      - url: http://localhost:8082
+    get:
+      tags: [moderation]
+      summary: Export the public transparency report
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [json, csv, markdown]
+            default: json
+        - name: since
+          in: query
+          schema:
+            type: string
+        - name: until
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Exported report
+          content:
+            application/json:
+              schema:
+                type: string
+            text/csv:
+              schema:
+                type: string
+            text/markdown:
+              schema:
+                type: string
   /v1/demo/state:
     servers:
       - url: http://localhost:8082
@@ -3700,6 +3759,31 @@ paths:
                     type: array
                     items:
                       $ref: "./channel.schema.json"
+  /api/v1/transparency:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Public transparency report
+      description: Proxies the public moderation transparency report without a credential.
+      parameters:
+        - name: since
+          in: query
+          schema:
+            type: string
+        - name: until
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Transparency report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransparencyReport"
+        "503":
+          description: Moderation service is not configured
   /api/v1/videos/{id}/trust:
     servers:
       - url: http://localhost:8080
@@ -6146,6 +6230,89 @@ components:
           type: integer
         ledger_records:
           type: integer
+    TransparencyReport:
+      type: object
+      additionalProperties: true
+      required:
+        - schema_version
+        - generated_at
+        - period
+        - instance
+        - summary
+        - enforcement_actions
+        - appeals
+        - categories
+        - content_protection
+        - finance
+        - creator_trust_index
+        - methodology
+        - limitations
+        - ledger
+      properties:
+        schema_version:
+          type: string
+        generated_at:
+          type: string
+          format: date-time
+        period:
+          type: object
+          additionalProperties: true
+          required: [from, to]
+          properties:
+            from:
+              type: [string, "null"]
+            to:
+              type: [string, "null"]
+        instance:
+          type: object
+          additionalProperties: true
+        summary:
+          type: object
+          additionalProperties: true
+        enforcement_actions:
+          type: object
+          additionalProperties: true
+        appeals:
+          type: object
+          additionalProperties: true
+        categories:
+          type: object
+          additionalProperties: true
+        content_protection:
+          type: object
+          additionalProperties: true
+        finance:
+          type: object
+          additionalProperties: true
+        creator_trust_index:
+          type: object
+          additionalProperties: true
+        methodology:
+          type: object
+          additionalProperties: true
+        limitations:
+          type: array
+          items:
+            type: string
+        corrections:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        ledger:
+          type: object
+          additionalProperties: true
+          required: [records, valid]
+          properties:
+            records:
+              type: integer
+            valid:
+              type: boolean
+            head:
+              type: [string, "null"]
+        policy:
+          type: object
+          additionalProperties: true
     CreatorCaseList:
       type: object
       additionalProperties: false
