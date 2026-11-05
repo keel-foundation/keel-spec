@@ -17,13 +17,13 @@ This repository contains the normative protocol specification, RFCs, schemas, an
   studio upload/transcoding/HLS, watch telemetry and creator analytics, creator notifications,
   viewer report ingestion, semantic search, playlists, channel profiles, scheduled publishing,
   comment moderation, public trust records, irreversible archived-video media purge, Google/Apple/X
-  social sign-in, ActivityPub federation, and read-only demo finance.
+  social sign-in, ActivityPub federation, and Stripe Connect creator onboarding/settlement.
   The web client is fully built against local preview data, including the feed, watch page,
   channels, search, library, creator studio, and creator moderation record. Its Cloudflare Worker
   BFF is implemented; the data adapters are the remaining UAT integration step. Core and moderation
   are UAT-ready, and the separate private staff moderation portal has the cases, enforcement,
   appeals, actions, ledger, and federation surfaces. PeerTube-compatible ActivityPub federation
-  v0.1 is implemented. Payouts are still a read-only demo.
+  v0.1 is implemented. Viewer billing and automatic settlement scheduling remain future work.
 
 ## Checks
 

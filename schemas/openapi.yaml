@@ -3515,6 +3515,93 @@ paths:
                 $ref: "#/components/schemas/PayoutPage"
         "401":
           description: A session is required
+  /api/v1/studio/billing/account:
+    servers:
+      - url: http://localhost:8080
+    get:
+      tags: [core]
+      summary: Read own Stripe Connect billing account
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Billing account state, or not_connected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingAccount"
+        "401":
+          description: A session is required
+        "503":
+          description: Stripe billing is not configured
+    post:
+      tags: [core]
+      summary: Create or connect the creator's Stripe account
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Account state and a Stripe onboarding link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingAccountLink"
+        "401":
+          description: A session is required
+        "409":
+          description: Creator monetization is not eligible
+        "503":
+          description: Stripe billing is not configured
+  /api/v1/studio/billing/account/link:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Create a fresh Stripe onboarding link
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Account state and a Stripe onboarding link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingAccountLink"
+        "401":
+          description: A session is required
+        "409":
+          description: Stripe account is not connected
+        "503":
+          description: Stripe billing is not configured
+  /api/v1/studio/billing/account/sync:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Refresh Stripe Connect account status
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: Updated billing account state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingAccount"
+        "401":
+          description: A session is required
+        "409":
+          description: Stripe account is not connected
+        "502":
+          description: Stripe request failed
+        "503":
+          description: Stripe billing is not configured
   /api/v1/channels:
     servers:
       - url: http://localhost:8080
@@ -4012,7 +4099,7 @@ paths:
                   type: number
                 status:
                   type: string
-                  enum: [paid, pending, held]
+                  enum: [paid, pending, processing, held, failed, reversed]
       responses:
         "200":
           description: Accepted
@@ -4020,6 +4107,72 @@ paths:
           description: Internal token required
         "422":
           description: Invalid finance event
+  /internal/v1/billing/settlements:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Settle a creator's available balance through Stripe Connect
+      security:
+        - internalToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [channel_id, period]
+              properties:
+                channel_id:
+                  type: string
+                period:
+                  type: string
+                  pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+      responses:
+        "200":
+          description: Created or idempotent settlement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payout"
+        "401":
+          description: Internal token required
+        "409":
+          description: Settlement cannot be created
+        "422":
+          description: Invalid settlement request
+        "502":
+          description: Stripe request failed
+        "503":
+          description: Stripe billing is not configured
+  /webhooks/stripe:
+    servers:
+      - url: http://localhost:8080
+    post:
+      tags: [core]
+      summary: Verify and process a Stripe webhook
+      parameters:
+        - name: Stripe-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Webhook accepted
+        "400":
+          description: Invalid Stripe signature or body
+        "500":
+          description: Webhook processing failed
+        "503":
+          description: Stripe webhooks are not configured
   /api/v1/me/password:
     servers:
       - url: http://localhost:8080
@@ -4416,7 +4569,7 @@ components:
           type: string
         type:
           type: string
-          enum: [ad_revenue, membership, payout, holdback]
+          enum: [ad_revenue, membership, payout, holdback, adjustment]
         amount:
           type: number
         balance:
@@ -4452,8 +4605,68 @@ components:
           type: number
         status:
           type: string
-          enum: [paid, pending, held]
+          enum: [paid, pending, processing, held, failed, reversed]
         date:
+          type: string
+          format: date-time
+        provider:
+          type: string
+          enum: [demo, stripe]
+        currency:
+          type: string
+        stripe_transfer_id:
+          type: string
+        stripe_account_id:
+          type: string
+        failure_reason:
+          type: string
+        attempt:
+          type: integer
+        updated_at:
+          type: string
+          format: date-time
+    BillingAccount:
+      type: object
+      additionalProperties: false
+      required: [channel_id, provider, stripe_account_id, status, details_submitted, payouts_enabled, charges_enabled, requirements_due]
+      properties:
+        channel_id:
+          type: string
+        provider:
+          type: string
+        stripe_account_id:
+          type: string
+        status:
+          type: string
+          enum: [not_connected, pending, active, restricted]
+        details_submitted:
+          type: boolean
+        payouts_enabled:
+          type: boolean
+        charges_enabled:
+          type: boolean
+        requirements_due:
+          type: array
+          items:
+            type: string
+        disabled_reason:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    BillingAccountLink:
+      type: object
+      additionalProperties: false
+      required: [account, onboarding_url, expires_at]
+      properties:
+        account:
+          $ref: "#/components/schemas/BillingAccount"
+        onboarding_url:
+          type: string
+        expires_at:
           type: string
           format: date-time
     PayoutPage:
